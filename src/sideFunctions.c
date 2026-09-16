@@ -1,8 +1,13 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <stdio.h>
+
+void freeObject(char *s) {
+	if (s) free(s);
+}
 
 char *concatStrings(const char *s1, const char *s2) {
     size_t firstLen = strlen(s1);
@@ -17,23 +22,27 @@ char *concatStrings(const char *s1, const char *s2) {
     return newString;
 }
 
-//int loopTrashForRedundancy(const char *fileName) {
-//	char trash[] = "/home/romeo/temp/trash/";
-//    DIR *dir;
-//    struct dirent *ent;
-//
-//    dir = opendir(trash);
-//    if (!dir) {
-//        perror("opendir");
-//        return -1;
-//    }
-//
-//    while ((ent = readdir(dir)) != NULL) {
-//        if ( strcmp(fileName , ent->d_name) == 0) {
-//			size_t fileSize = strlen(fileName);
-//		}
-//    }
-//
-//    closedir(dir);
-//    return 0;
-//}
+char *loopTrashForRedundancy(const char *fileName) {
+	char trash[] = "/home/romeo/temp/trash/";
+    DIR *dir;
+    struct dirent *ent;
+
+    dir = opendir(trash);
+    if (!dir) {
+        perror("opendir");
+        return NULL;
+    }
+	char *result = NULL;
+    while ((ent = readdir(dir)) != NULL) {
+        if ( strcmp(fileName , ent->d_name) == 0) {
+			time_t now = time(NULL);
+			char timeStr[32];
+			strftime(timeStr, sizeof timeStr, "_%Y%m%d_%H%M%S", localtime(&now));
+			result = concatStrings(fileName , timeStr);
+			break;
+		}
+    }
+
+    closedir(dir);
+    return result;
+}
