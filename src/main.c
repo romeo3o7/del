@@ -8,6 +8,8 @@ void viewTrash();
 
 char *concatStrings(const char *s1, const char *s2);
 
+int createDirctory(const char *s);
+
 char *loopTrashForRedundancy(const char *fileName);
 
 void freeObject(char *s);
@@ -26,10 +28,17 @@ int main(int argc, char *argv[]) {
 		path[sizeOfPath + 1 ] = '\0';
 	} else {
 		fprintf( stderr , "path is overflown\n");
-		return 300;
+		return 202;
 	}
-	char trash[] = "/home/romeo/temp/trash/";
-
+	const char *homePath = getenv("HOME");
+	char *trash = concatStrings(homePath , "/temp/trash/");
+	if ( access(trash , F_OK) < 0 ) {
+		fprintf(stderr , "Trash Not Found\n");
+		if(	createDirctory(trash) != 0 ) {
+			fprintf(stderr , "failed to create a dirctory\n");
+			return 203;
+		}
+	}
 	char *object = NULL , *objectName = NULL;
 	for (int i = 1; argv[i]; i++) {
 		if (strcmp("--clear",argv[i]) == 0 ) {
@@ -51,16 +60,15 @@ int main(int argc, char *argv[]) {
 		char *newTrashObjectName = loopTrashForRedundancy(argv[i]);
 		if (newTrashObjectName == NULL) newTrashObjectName = argv[i];
 		objectName = concatStrings(trash , newTrashObjectName);
+		freeObject(newTrashObjectName);
 		if ( rename(object,objectName) < 0 ) {
 			printf("couldn't move object To Trash\n");
 			freeObject(object);
 			freeObject(objectName);
-			freeObject(newTrashObjectName);
 			continue;
 		}
 		freeObject(object);
 		freeObject(objectName);
-		freeObject(newTrashObjectName);
 	}
 	return 0;
 }

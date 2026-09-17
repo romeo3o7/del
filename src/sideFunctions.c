@@ -1,3 +1,5 @@
+#include <errno.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
@@ -60,3 +62,27 @@ char *loopTrashForRedundancy(const char *fileName) {
     closedir(dir);
     return result;
 }
+int createDirctory(const char *s) {
+    int exitStatus = mkdir(s,0700);
+    if ( exitStatus == 0 ) {
+        printf("succesfully created a dir: %s\n" , s);
+        return 0;
+    }
+    else if (errno == EEXIST ) {
+        fprintf(stderr , "%s already exits" , s);
+		return 0;
+    }
+
+    else if (errno == EDQUOT || errno == ENOSPC) {
+        fprintf(stderr, "No Space\n");
+        return 1;
+    }
+
+    else if (errno == ENOENT ) {
+        fprintf(stderr ,"parent dirctories {.local AND share} don't exit \n");
+        return 1;
+    }
+
+    return -1;
+}
+
