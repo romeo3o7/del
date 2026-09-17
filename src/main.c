@@ -10,7 +10,7 @@ char *concatStrings(const char *s1, const char *s2);
 
 int createDirctory(const char *s);
 
-char *loopTrashForRedundancy(const char *fileName);
+char *loopTrashForRedundancy(const char *trash , const char *fileName);
 
 void freeObject(char *s);
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 			return 203;
 		}
 	}
-	char *object = NULL , *objectName = NULL;
+	char *objectName = NULL , *newObjectName = NULL;
 	for (int i = 1; argv[i]; i++) {
 		if (strcmp("--clear",argv[i]) == 0 ) {
 			printf("im clear\n");
@@ -50,25 +50,30 @@ int main(int argc, char *argv[]) {
 			viewTrash();
 			continue;
 		}
-		object = concatStrings(path,argv[i]);
-		if ( access(object , F_OK ) < 0) {
+		// /home/romeo/path/to/file
+		objectName = concatStrings(path,argv[i]);
+		if ( access(objectName , F_OK ) < 0) {
 			printf("object %s not found\n" , argv[i]);
-			freeObject(object);
-			continue;
-		}
-
-		char *newTrashObjectName = loopTrashForRedundancy(argv[i]);
-		if (newTrashObjectName == NULL) newTrashObjectName = argv[i];
-		objectName = concatStrings(trash , newTrashObjectName);
-		freeObject(newTrashObjectName);
-		if ( rename(object,objectName) < 0 ) {
-			printf("couldn't move object To Trash\n");
-			freeObject(object);
 			freeObject(objectName);
 			continue;
 		}
-		freeObject(object);
+
+		char *newTrashObjectName = loopTrashForRedundancy(trash,argv[i]);
+		char *toFree = newTrashObjectName;
+		if (newTrashObjectName == NULL) {
+			newTrashObjectName = argv[i];
+		}
+		newObjectName = concatStrings(trash , newTrashObjectName);
+		if (toFree) freeObject(newTrashObjectName);
+		if (rename(objectName,newObjectName) < 0) {
+			printf("couldn't move object To Trash\n");
+			freeObject(objectName);
+			freeObject(newObjectName);
+			continue;
+		}
 		freeObject(objectName);
+		freeObject(newObjectName);
 	}
+	free(trash);
 	return 0;
 }

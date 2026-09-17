@@ -8,9 +8,10 @@
 #include <stdio.h>
 
 void freeObject(char *s) {
-	if (s) free(s);
+	if(s) free(s);
 }
 void clearTrash() {}
+
 void viewTrash() {
 	char trash[] = "/home/romeo/temp/trash/";
     DIR *dir;
@@ -22,7 +23,7 @@ void viewTrash() {
 		return;
     }
     while ( (ent = readdir(dir)) != NULL) {
-		printf("%s " , ent->d_name);
+		printf("%s\n" , ent->d_name);
 	}
 }
 char *concatStrings(const char *s1, const char *s2) {
@@ -38,8 +39,7 @@ char *concatStrings(const char *s1, const char *s2) {
     return newString;
 }
 
-char *loopTrashForRedundancy(const char *fileName) {
-	char trash[] = "/home/romeo/temp/trash/";
+char *loopTrashForRedundancy(const char *trash , const char *fileName) {
     DIR *dir;
     struct dirent *ent;
 
