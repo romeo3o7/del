@@ -8,7 +8,21 @@
 void freeObject(char *s) {
 	if (s) free(s);
 }
+void clearTrash() {}
+void viewTrash() {
+	char trash[] = "/home/romeo/temp/trash/";
+    DIR *dir;
+    struct dirent *ent;
 
+    dir = opendir(trash);
+    if (!dir) {
+        perror("opendir");
+		return;
+    }
+    while ( (ent = readdir(dir)) != NULL) {
+		printf("%s " , ent->d_name);
+	}
+}
 char *concatStrings(const char *s1, const char *s2) {
     size_t firstLen = strlen(s1);
     size_t secondLen = strlen(s2);
@@ -37,7 +51,7 @@ char *loopTrashForRedundancy(const char *fileName) {
         if ( strcmp(fileName , ent->d_name) == 0) {
 			time_t now = time(NULL);
 			char timeStr[32];
-			strftime(timeStr, sizeof timeStr, "_%Y%m%d_%H%M%S", localtime(&now));
+			strftime(timeStr, sizeof timeStr, "->%Y%m%d-%H%M%S", localtime(&now));
 			result = concatStrings(fileName , timeStr);
 			break;
 		}
