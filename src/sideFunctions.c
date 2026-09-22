@@ -26,6 +26,38 @@ void viewTrash() {
 		printf("%s\n" , ent->d_name);
 	}
 }
+
+_Bool addSlashEnd(char *s) {
+	size_t size = strlen(s);
+	if (size + 1 < 512) {
+		s[size] = '/';
+		s[size + 1] = '\0';
+	} else {
+		fprintf( stderr , "path is overflown\n");
+		return 1;
+	}
+	return 0;
+}
+
+char *retNameLastDash(char *arg) {
+	size_t len = strlen(arg);
+	char name[128];
+	int j = 0;
+	for(int i = len - 1; arg[i] != '/'; i--) {
+		name[j++] = arg[i];
+	}
+	name[j] = '\0';
+	size_t nameLen = strlen(name);
+
+	char *result = malloc(nameLen + 2);
+	int x = 0;
+	for(int i = nameLen - 1; i >= 0; i--) {
+		result[x++] = name[i];
+	}
+	result[x] = '\0';
+	return result;
+}
+
 char *concatStrings(const char *s1, const char *s2) {
     size_t firstLen = strlen(s1);
     size_t secondLen = strlen(s2);
