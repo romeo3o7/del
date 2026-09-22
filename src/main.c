@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
 	char path[512];
 	if ( getcwd(path , sizeof path) == NULL ) return 200;
 	const char *homePath = getenv("HOME");
+	addSlashEnd(path);
 
 	char trash[512];
 	char *tempTrash = concatStrings(homePath , "/temp/trash/");
@@ -55,7 +56,6 @@ int main(int argc, char *argv[]) {
 		char *arg = argv[i];
 		retFileName = retNameLastDash(arg);
 		if ( arg[0] != '/' ) {
-			addSlashEnd(path);
 			objectName = concatStrings(path,arg);
 		} else {
 			objectName = concatStrings("",arg);
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
 		newObjectName = concatStrings(trash , newTrashObjectName);
 		if (toFree) freeObject(newTrashObjectName);
-		if(retFileName) free(retFileName);
+		freeObject(retFileName);
 		printf("object Name:%s\nnew location:%s\n" , objectName,newObjectName);
 		if (rename(objectName,newObjectName) < 0) {
 			printf("couldn't move object To Trash\n");

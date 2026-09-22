@@ -41,10 +41,15 @@ _Bool addSlashEnd(char *s) {
 
 char *retNameLastDash(char *arg) {
 	size_t len = strlen(arg);
+	if (len == 0) return NULL;
 	char name[128];
 	int j = 0;
+
+	if (len > 0 && arg[len - 1] == '/') len-=1;
+
 	for(int i = len - 1; arg[i] != '/'; i--) {
 		name[j++] = arg[i];
+		if (i == 0) break;
 	}
 	name[j] = '\0';
 	size_t nameLen = strlen(name);
