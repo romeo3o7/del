@@ -12,8 +12,7 @@ void freeObject(char *s) {
 }
 void clearTrash() {}
 
-void viewTrash() {
-	char trash[] = "/home/romeo/temp/trash/";
+void viewTrash(const char *trash) {
     DIR *dir;
     struct dirent *ent;
 
@@ -23,13 +22,15 @@ void viewTrash() {
 		return;
     }
     while ( (ent = readdir(dir)) != NULL) {
+		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
 		printf("%s\n" , ent->d_name);
 	}
+	closedir(dir);
 }
 
-_Bool addSlashEnd(char *s) {
+_Bool addSlashEnd(char *s , size_t len) {
 	size_t size = strlen(s);
-	if (size + 1 < 512) {
+	if (size + 1 < len) {
 		s[size] = '/';
 		s[size + 1] = '\0';
 	} else {
@@ -77,26 +78,15 @@ char *concatStrings(const char *s1, const char *s2) {
 }
 
 char *loopTrashForRedundancy(const char *trash , const char *fileName) {
-    DIR *dir;
-    struct dirent *ent;
-
-    dir = opendir(trash);
-    if (!dir) {
-        perror("opendir");
-        return NULL;
-    }
 	char *result = NULL;
-    while ((ent = readdir(dir)) != NULL) {
-        if ( strcmp(fileName , ent->d_name) == 0) {
-			time_t now = time(NULL);
-			char timeStr[32];
-			strftime(timeStr, sizeof timeStr, "->%Y%m%d-%H%M%S", localtime(&now));
-			result = concatStrings(fileName , timeStr);
-			break;
-		}
-    }
-
-    closedir(dir);
+	char *fileToCheck = concatStrings(trash,fileName);
+    if (access(fileToCheck , F_OK) == 0) {
+		time_t now = time(NULL);
+		char timeStr[32];
+		strftime(timeStr, sizeof timeStr, "->%Y%m%d-%H%M%S", localtime(&now));
+		result = concatStrings(fileName , timeStr);
+	}
+    freeObject(fileToCheck);
     return result;
 }
 int createDirctory(const char *s) {

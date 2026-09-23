@@ -4,20 +4,19 @@
 #include <unistd.h>
 #include <stdio.h>
 
-void viewTrash();
-
-void freeObject(char *s);
-
-_Bool addSlashEnd(char *s);
+void freeObject(const char *s);
 
 char *retNameLastDash(char *arg);
 
 int createDirctory(const char *s);
 
+void viewTrash(const char *trash);
+
+_Bool addSlashEnd(char *s , size_t len);
+
 char *concatStrings(const char *s1, const char *s2);
 
 char *loopTrashForRedundancy(const char *trash , const char *fileName);
-
 
 int main(int argc, char *argv[]) {
 	if (argc == 1) {
@@ -27,12 +26,10 @@ int main(int argc, char *argv[]) {
 	char path[512];
 	if ( getcwd(path , sizeof path) == NULL ) return 200;
 	const char *homePath = getenv("HOME");
-	addSlashEnd(path);
+	addSlashEnd(path,512);
 
-	char trash[512];
-	char *tempTrash = concatStrings(homePath , "/temp/trash/");
-	strncpy(trash,tempTrash, sizeof(trash) - 1 );
-	free(tempTrash);
+	char *trash = concatStrings(homePath , "/temp/trash/");
+
 	if ( access(trash , F_OK) < 0 ) {
 		fprintf(stderr , "Trash Not Found\n");
 		if(	createDirctory(trash) != 0 ) {
@@ -49,12 +46,13 @@ int main(int argc, char *argv[]) {
 			// remove everthing in trash
 		}
 		if (strcmp("--show",argv[i]) == 0 ) {
-			viewTrash();
+			viewTrash(trash);
 			continue;
 		}
 
 		char *arg = argv[i];
 		retFileName = retNameLastDash(arg);
+		if (!retFileName) { fprintf(stderr,"failed to return name\n"); continue; }
 		if ( arg[0] != '/' ) {
 			objectName = concatStrings(path,arg);
 		} else {
@@ -64,6 +62,8 @@ int main(int argc, char *argv[]) {
 		if ( access(objectName , F_OK ) < 0) {
 			printf("object %s not found\n" , objectName);
 			freeObject(objectName);
+			freeObject(trash);
+			freeObject(retFileName);
 			continue;
 		}
 
@@ -84,5 +84,6 @@ int main(int argc, char *argv[]) {
 		freeObject(objectName);
 		freeObject(newObjectName);
 	}
+	freeObject(trash);
 	return 0;
 }
