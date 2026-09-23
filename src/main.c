@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <dirent.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -21,12 +20,16 @@ char *loopTrashForRedundancy(const char *trash , const char *fileName);
 int main(int argc, char *argv[]) {
 	if (argc == 1) {
 		fprintf(stderr , "include an object to delete\n");
-		return 104;
+		return EXIT_FAILURE;
 	}
 	char path[512];
-	if ( getcwd(path , sizeof path) == NULL ) return 200;
+	if ( getcwd(path , sizeof path) == NULL ) return EXIT_FAILURE;
+
+	if ( addSlashEnd(path,512) ) return EXIT_FAILURE;
+
 	const char *homePath = getenv("HOME");
-	addSlashEnd(path,512);
+
+	if(!homePath) return EXIT_FAILURE;
 
 	char *trash = concatStrings(homePath , "/temp/trash/");
 
@@ -34,56 +37,72 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr , "Trash Not Found\n");
 		if(	createDirctory(trash) != 0 ) {
 			fprintf(stderr , "failed to create a dirctory\n");
-			return 203;
+			return EXIT_FAILURE;
 		}
 	}
 
-	char *objectName = NULL , *newObjectName = NULL, *retFileName = NULL;
+	char *pathObject 	= NULL;
+	char *newPathObject = NULL;
+	char *objectName = NULL;
+	int status = 0;
 	for (int i = 1; argv[i]; i++) {
-		if (strcmp("--clear",argv[i]) == 0 ) {
+		char *arg = argv[i];
+
+		if (strcmp("--clear",arg) == 0 ) {
 			printf("im clear\n");
 			continue;
 			// remove everthing in trash
 		}
-		if (strcmp("--show",argv[i]) == 0 ) {
+		if (strcmp("--show",arg) == 0 ) {
 			viewTrash(trash);
 			continue;
 		}
 
-		char *arg = argv[i];
-		retFileName = retNameLastDash(arg);
-		if (!retFileName) { fprintf(stderr,"failed to return name\n"); continue; }
-		if ( arg[0] != '/' ) {
-			objectName = concatStrings(path,arg);
-		} else {
-			objectName = concatStrings("",arg);
-		}
-
-		if ( access(objectName , F_OK ) < 0) {
-			printf("object %s not found\n" , objectName);
-			freeObject(objectName);
+		objectName = retNameLastDash(arg);
+		if (!objectName) {
+			fprintf(stderr,"failed to extract name\n");
 			freeObject(trash);
-			freeObject(retFileName);
+			status = 1;
 			continue;
 		}
 
-		char *newTrashObjectName = loopTrashForRedundancy(trash,retFileName);
-		_Bool toFree = newTrashObjectName;
-		if (!newTrashObjectName ) newTrashObjectName = retFileName;
+		// absolute path # find a way to assign object path to arg and not get free error
+		if ( arg[0] == '/' ){
+			pathObject = concatStrings("",arg);
+		} else {
+			pathObject = concatStrings(path,arg);
+		}
 
-		newObjectName = concatStrings(trash , newTrashObjectName);
-		if (toFree) freeObject(newTrashObjectName);
-		freeObject(retFileName);
-		printf("object Name:%s\nnew location:%s\n" , objectName,newObjectName);
-		if (rename(objectName,newObjectName) < 0) {
-			printf("couldn't move object To Trash\n");
+		if ( access(pathObject , F_OK ) < 0) {
+			printf("object %s not found\n" , pathObject);
+			freeObject(pathObject);
 			freeObject(objectName);
-			freeObject(newObjectName);
+			status = 1;
 			continue;
 		}
+		// check in trash for equivlent object name
+		char *objectTrashName = loopTrashForRedundancy(trash,objectName);
+		_Bool toFree = objectTrashName;
+
+		// if no new name was assigned
+		if (!objectTrashName ) objectTrashName = objectName;
+
+		newPathObject = concatStrings(trash , objectTrashName);
+		if (toFree) freeObject(objectTrashName);
 		freeObject(objectName);
-		freeObject(newObjectName);
+
+		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
+
+		if (rename(pathObject,newPathObject) < 0) {
+			printf("couldn't move object To Trash\n");
+			freeObject(pathObject);
+			freeObject(newPathObject);
+			status = 1;
+			continue;
+		}
+		freeObject(pathObject);
+		freeObject(newPathObject);
 	}
 	freeObject(trash);
-	return 0;
-}
+	return status;
+ }

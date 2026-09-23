@@ -43,21 +43,26 @@ _Bool addSlashEnd(char *s , size_t len) {
 char *retNameLastDash(char *arg) {
 	size_t len = strlen(arg);
 	if (len == 0) return NULL;
-	char name[128];
+	int i = (int)len;
+	while (len > 0 && i > 0 && arg[i - 1] == '/') {
+		len--;
+		i--;
+	}
+	if (len == 0) return NULL;
+
+	char name[512];
 	int j = 0;
-
-	if (len > 0 && arg[len - 1] == '/') len-=1;
-
-	for(int i = len - 1; arg[i] != '/'; i--) {
+	for(int i = (int)len - 1; i >= 0 && arg[i] != '/'; i--) {
 		name[j++] = arg[i];
-		if (i == 0) break;
 	}
 	name[j] = '\0';
 	size_t nameLen = strlen(name);
 
 	char *result = malloc(nameLen + 2);
+	if (!result) return NULL;
+
 	int x = 0;
-	for(int i = nameLen - 1; i >= 0; i--) {
+	for(int i = (int)nameLen - 1; i >= 0; i--) {
 		result[x++] = name[i];
 	}
 	result[x] = '\0';
@@ -68,6 +73,8 @@ char *concatStrings(const char *s1, const char *s2) {
     size_t firstLen = strlen(s1);
     size_t secondLen = strlen(s2);
     char *newString = malloc(firstLen + secondLen + 1);
+
+	if(!newString) return NULL;
 
     for (size_t i = 0; i < firstLen; i++) newString[i] = s1[i];
 
