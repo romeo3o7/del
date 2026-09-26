@@ -1,23 +1,10 @@
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-
-void freeObject(const char *s);
-
-char *retNameLastDash(char *arg);
-
-int createDirctory(const char *s);
-
-void viewTrash(const char *trash);
-
-_Bool addSlashEnd(char *s , size_t len);
-
-char *concatStrings(const char *s1, const char *s2);
-
-char *loopTrashForRedundancy(const char *trash , const char *fileName);
+#include "def.h"
 
 int main(int argc, char *argv[]) {
+
 	if (argc == 1) {
 		fprintf(stderr , "include an object to delete\n");
 		return EXIT_FAILURE;
@@ -31,7 +18,7 @@ int main(int argc, char *argv[]) {
 
 	if(!homePath) return EXIT_FAILURE;
 
-	char *trash = concatStrings(homePath , "/temp/trash/");
+	char *trash = concatStrings(homePath , "/.local/share/Trash/files/");
 
 	if ( access(trash , F_OK) < 0 ) {
 		fprintf(stderr , "Trash Not Found\n");
@@ -41,28 +28,32 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	char *pathObject 	= NULL;
-	char *newPathObject = NULL;
-	char *objectName = NULL;
+	_Bool disableFlag = 0;
 	int status = 0;
+
 	for (int i = 1; argv[i]; i++) {
 		char *arg = argv[i];
 
-		if (strcmp("--clear",arg) == 0 ) {
-			printf("im clear\n");
-			continue;
-			// remove everthing in trash
+		if (!disableFlag) {
+			int flagReturn = flagHand(arg,trash);
+			if (flagReturn == 1) {
+				continue;
+			}
+			else if (flagReturn == -1) {
+				printf("disabling flags\n");
+				disableFlag = 1;
+				continue;
+			}
 		}
-		if (strcmp("--show",arg) == 0 ) {
-			viewTrash(trash);
-			continue;
-		}
+
+		char *pathObject 	= NULL;
+		char *newPathObject = NULL;
+		char *objectName    = NULL;
 
 		objectName = retNameLastDash(arg);
 		if (!objectName) {
 			fprintf(stderr,"failed to extract name\n");
-			freeObject(trash);
-			status = 1;
+			status = 2;
 			continue;
 		}
 
@@ -74,10 +65,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		if ( access(pathObject , F_OK ) < 0) {
-			printf("object %s not found\n" , pathObject);
+			fprintf(stderr ,"object %s not found\n" , pathObject);
 			freeObject(pathObject);
 			freeObject(objectName);
-			status = 1;
+			status = 2;
 			continue;
 		}
 		// check in trash for equivlent object name
@@ -94,15 +85,18 @@ int main(int argc, char *argv[]) {
 		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
-			printf("couldn't move object To Trash\n");
+			fprintf(stderr, "couldn't move object To Trash\n");
 			freeObject(pathObject);
 			freeObject(newPathObject);
-			status = 1;
+			status = 2;
 			continue;
 		}
+
 		freeObject(pathObject);
 		freeObject(newPathObject);
-	}
+
+	} // end of for
+
 	freeObject(trash);
 	return status;
  }

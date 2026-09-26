@@ -12,20 +12,21 @@ void freeObject(char *s) {
 }
 void clearTrash() {}
 
-void viewTrash(const char *trash) {
+int viewTrash(const char *trash) {
     DIR *dir;
     struct dirent *ent;
 
     dir = opendir(trash);
     if (!dir) {
         perror("opendir");
-		return;
+		return 1;
     }
     while ( (ent = readdir(dir)) != NULL) {
 		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
 		printf("%s\n" , ent->d_name);
 	}
 	closedir(dir);
+	return 0;
 }
 
 _Bool addSlashEnd(char *s , size_t len) {
@@ -96,6 +97,33 @@ char *loopTrashForRedundancy(const char *trash , const char *fileName) {
     freeObject(fileToCheck);
     return result;
 }
+int flagHand(char *arg, const char *trash) {
+	// return 1 if flag is handled, 0 if its not flag, -1 to disable flags
+	if ( arg[0] == '-' && arg[1] == '-' ) {
+		if (!(strlen(arg) == 2)) {
+			if (strcmp("--clear",arg) == 0 ) {
+				printf("im clear\n");
+				return 1;
+				// remove everthing in trash
+			}
+			if (strcmp("--restore",arg) == 0 ) {
+				printf("im restore\n");
+				return 1;
+				// remove everthing in trash
+			}
+			if (strcmp("--show",arg) == 0 ) {
+				viewTrash(trash);
+				return 1;
+			}
+			fprintf(stderr,"flag not found\n");
+			return 1;
+		}
+			return -1;
+
+	}
+	return 0;
+}
+
 int createDirctory(const char *s) {
     int exitStatus = mkdir(s,0700);
     if ( exitStatus == 0 ) {
