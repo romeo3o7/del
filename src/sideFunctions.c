@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -6,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdio.h>
+#include "def.h"
 
 void freeObject(char *s) {
 	if(s) free(s);
@@ -38,6 +40,29 @@ _Bool addSlashEnd(char *s , size_t len) {
 		fprintf( stderr , "path is overflown\n");
 		return 1;
 	}
+	return 0;
+}
+
+int objectMetadata(char *file , char *objectPath) {
+	int fd = open(file,O_RDWR | O_CREAT,0600);
+	if (fd < 0) {
+		perror("open");
+		return 1;
+	}
+	// [Trash Info]
+ 	//Path=/home/romeo/.bash_history
+	//DeletionDate=2026-06-26T20:44:27
+	char *data = "[Trash Info]\nPath=";
+	char *datax = concatStrings(data,objectPath);
+	size_t size = strlen(datax);
+	if ( write(fd, datax , size) < 0 ) {
+		perror("write");
+		close(fd);
+		freeObject(datax);
+		return 1;
+	}
+	close(fd);
+	freeObject(datax);
 	return 0;
 }
 
@@ -91,7 +116,7 @@ char *loopTrashForRedundancy(const char *trash , const char *fileName) {
     if (access(fileToCheck , F_OK) == 0) {
 		time_t now = time(NULL);
 		char timeStr[32];
-		strftime(timeStr, sizeof timeStr, "->%Y%m%d-%H%M%S", localtime(&now));
+		strftime(timeStr, sizeof timeStr, "@%Y-%m-%d_%H-%M-%S", localtime(&now));
 		result = concatStrings(fileName , timeStr);
 	}
     freeObject(fileToCheck);
@@ -141,7 +166,7 @@ int createDirctory(const char *s) {
     }
 
     else if (errno == ENOENT ) {
-        fprintf(stderr ,"parent dirctories {.local AND share} don't exit \n");
+        fprintf(stderr ,"parent dirctories don't exit \n");
         return 1;
     }
 

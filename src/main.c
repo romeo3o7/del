@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <error.h>
 #include "def.h"
 
 int main(int argc, char *argv[]) {
@@ -21,12 +22,14 @@ int main(int argc, char *argv[]) {
 	char *trash = concatStrings(homePath , "/.local/share/Trash/files/");
 
 	if ( access(trash , F_OK) < 0 ) {
-		fprintf(stderr , "Trash Not Found\n");
+		perror("Trash access");
 		if(	createDirctory(trash) != 0 ) {
 			fprintf(stderr , "failed to create a dirctory\n");
 			return EXIT_FAILURE;
 		}
 	}
+
+	char *metadata = concatStrings(homePath,"/.local/share/Trash/info/");
 
 	_Bool disableFlag = 0;
 	int status = 0;
@@ -65,7 +68,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		if ( access(pathObject , F_OK ) < 0) {
-			fprintf(stderr ,"object %s not found\n" , pathObject);
+			perror("object access");
+			//fprintf(stderr ,"object %s not found\n" , pathObject);
 			freeObject(pathObject);
 			freeObject(objectName);
 			status = 2;
@@ -79,24 +83,36 @@ int main(int argc, char *argv[]) {
 		if (!objectTrashName ) objectTrashName = objectName;
 
 		newPathObject = concatStrings(trash , objectTrashName);
-		if (toFree) freeObject(objectTrashName);
-		freeObject(objectName);
 
 		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
-			fprintf(stderr, "couldn't move object To Trash\n");
+			perror("rename");
+			//fprintf(stderr, "couldn't move object To Trash\n");
+			if (toFree) freeObject(objectTrashName);
 			freeObject(pathObject);
 			freeObject(newPathObject);
 			status = 2;
 			continue;
 		}
 
+		// create a metadat file
+		char *metadataPath = concatStrings(metadata,objectTrashName);
+		char *file = concatStrings(metadataPath , ".trashinfo");
+		printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
+		objectMetadata(file, pathObject);
+
+		freeObject(metadataPath);
+		freeObject(file);
+
+	 	if (toFree) freeObject(objectTrashName);
 		freeObject(pathObject);
+		freeObject(objectName);
 		freeObject(newPathObject);
 
 	} // end of for
 
 	freeObject(trash);
+	freeObject(metadata);
 	return status;
  }

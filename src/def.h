@@ -1,4 +1,4 @@
-void freeObject(const char *s);
+void freeObject(char *s);
 
 char *retNameLastDash(char *arg);
 
@@ -11,5 +11,9 @@ _Bool addSlashEnd(char *s , size_t len);
 int flagHand(char *arg, const char *trash);
 
 char *concatStrings(const char *s1, const char *s2);
+
+int objectMetadata(char *metadataPath , char *objectPath);
+
+char *concatStringsNoMalloc(const char *s1 , const char *s2);
 
 char *loopTrashForRedundancy(const char *trash , const char *fileName);
