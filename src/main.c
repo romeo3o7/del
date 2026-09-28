@@ -10,26 +10,31 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr , "include an object to delete\n");
 		return EXIT_FAILURE;
 	}
+
 	char path[512];
 	if ( getcwd(path , sizeof path) == NULL ) return EXIT_FAILURE;
 
 	if ( addSlashEnd(path,512) ) return EXIT_FAILURE;
 
+	const char *dataPath = getenv("XDG_DATA_HOME");
+
+	if(!dataPath) {
 	const char *homePath = getenv("HOME");
-
 	if(!homePath) return EXIT_FAILURE;
-
-	char *trash = concatStrings(homePath , "/.local/share/Trash/files/");
-
-	if ( access(trash , F_OK) < 0 ) {
-		perror("Trash access");
-		if(	createDirctory(trash) != 0 ) {
-			fprintf(stderr , "failed to create a dirctory\n");
-			return EXIT_FAILURE;
-		}
+		dataPath = concatStrings(homePath,"/.local/share");
 	}
 
-	char *metadata = concatStrings(homePath,"/.local/share/Trash/info/");
+	char *trash = concatStrings(dataPath , "/Trash/files/");
+
+	if ( access(trash , F_OK) < 0 ) {
+		perror("Trash Directory Access");
+	//	if(	createDirctory(trash) != 0 ) {
+	//		fprintf(stderr , "failed to create a dirctory\n");
+	//		return EXIT_FAILURE;
+	//	}
+	}
+
+	char *meta = concatStrings(dataPath,"/Trash/info/");
 
 	_Bool disableFlag = 0;
 	int status = 0;
@@ -38,7 +43,7 @@ int main(int argc, char *argv[]) {
 		char *arg = argv[i];
 
 		if (!disableFlag) {
-			int flagReturn = flagHand(arg,trash);
+			int flagReturn = flagHand(arg,trash,meta);
 			if (flagReturn == 1) {
 				continue;
 			}
@@ -60,7 +65,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		// absolute path # find a way to assign object path to arg and not get free error
+		/// absolute path # find a way to assign object path to arg and not get free error
 		if ( arg[0] == '/' ){
 			pathObject = concatStrings("",arg);
 		} else {
@@ -84,7 +89,7 @@ int main(int argc, char *argv[]) {
 
 		newPathObject = concatStrings(trash , objectTrashName);
 
-		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
+		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
 			perror("rename");
@@ -97,9 +102,9 @@ int main(int argc, char *argv[]) {
 		}
 
 		// create a metadat file
-		char *metadataPath = concatStrings(metadata,objectTrashName);
+		char *metadataPath = concatStrings(meta,objectTrashName);
 		char *file = concatStrings(metadataPath , ".trashinfo");
-		printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
+		//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
 		objectMetadata(file, pathObject);
 
 		freeObject(metadataPath);
@@ -113,6 +118,6 @@ int main(int argc, char *argv[]) {
 	} // end of for
 
 	freeObject(trash);
-	freeObject(metadata);
+	freeObject(meta);
 	return status;
  }

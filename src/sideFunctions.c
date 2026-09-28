@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -12,13 +13,34 @@
 void freeObject(char *s) {
 	if(s) free(s);
 }
-void clearTrash() {}
 
-int viewTrash(const char *trash) {
+void clearDir(char *cd) {
+	DIR *dir = opendir(cd);
+    struct dirent *ent;
+    if (!dir) { perror("opendir"); return; }
+
+	while ( (ent = readdir(dir)) != NULL) {
+		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
+		char fullPath[4096];
+		snprintf(fullPath,sizeof(fullPath),"%s%s" , cd , ent->d_name);
+		if (ent->d_type == DT_DIR) {
+			// dir
+			clearDir(fullPath);
+			rmdir(fullPath);
+
+		} else  {
+			remove(fullPath);
+		}
+
+	}
+	closedir(dir);
+}
+
+int viewDir(const char *cd) {
     DIR *dir;
     struct dirent *ent;
 
-    dir = opendir(trash);
+    dir = opendir(cd);
     if (!dir) {
         perror("opendir");
 		return 1;
@@ -122,12 +144,16 @@ char *loopTrashForRedundancy(const char *trash , const char *fileName) {
     freeObject(fileToCheck);
     return result;
 }
-int flagHand(char *arg, const char *trash) {
+int flagHand(char *arg, char *trash, char* meta) {
 	// return 1 if flag is handled, 0 if its not flag, -1 to disable flags
 	if ( arg[0] == '-' && arg[1] == '-' ) {
 		if (!(strlen(arg) == 2)) {
 			if (strcmp("--clear",arg) == 0 ) {
-				printf("im clear\n");
+				char *dirs[] = {trash , meta};
+				for (int i = 0; i < 2; i++ ) {
+					char *cd = dirs[i];
+					clearDir(cd);
+				}
 				return 1;
 				// remove everthing in trash
 			}
@@ -137,7 +163,7 @@ int flagHand(char *arg, const char *trash) {
 				// remove everthing in trash
 			}
 			if (strcmp("--show",arg) == 0 ) {
-				viewTrash(trash);
+				viewDir(trash);
 				return 1;
 			}
 			fprintf(stderr,"flag not found\n");
@@ -172,4 +198,3 @@ int createDirctory(const char *s) {
 
     return -1;
 }
-
