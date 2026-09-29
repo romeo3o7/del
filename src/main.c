@@ -9,6 +9,7 @@ int main(int argc, char *argv[]) {
 
 	if (argc == 1) {
 		fprintf(stderr , "include an object to delete\n");
+		usage();
 		return EXIT_FAILURE;
 	}
 
@@ -23,6 +24,7 @@ int main(int argc, char *argv[]) {
 
 	if(!xdgData) {
 		char *homePath = getenv("HOME");
+		if (!homePath) return EXIT_FAILURE;
 		concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share");
 	} else {
 		concatStringsNoMalloc(dataPath,sizeof(dataPath),xdgData,"");

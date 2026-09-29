@@ -166,10 +166,14 @@ int flagHand(char *arg, char *trash, char* meta) {
 				return 1;
 			}
 			fprintf(stderr,"flag not found\n");
+			usage();
 			return 1;
 		}
 			return -1;
 
 	}
 	return 0;
+}
+void usage() {
+	printf("del [object]\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n");
 }

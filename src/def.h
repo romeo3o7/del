@@ -1,3 +1,5 @@
+void usage();
+
 void clearDir(char *dir);
 
 void freeObject(char *s);
