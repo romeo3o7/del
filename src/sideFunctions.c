@@ -1,7 +1,4 @@
-#include <errno.h>
-#include <sys/wait.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
@@ -14,6 +11,11 @@ void freeObject(char *s) {
 	if(s) free(s);
 }
 
+char *concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2) {
+    snprintf(dest, destSize, "%s%s", s1, s2);
+    return dest;
+}
+
 void clearDir(char *cd) {
 	DIR *dir = opendir(cd);
     struct dirent *ent;
@@ -21,8 +23,8 @@ void clearDir(char *cd) {
 
 	while ( (ent = readdir(dir)) != NULL) {
 		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
-		char fullPath[4096];
-		snprintf(fullPath,sizeof(fullPath),"%s%s" , cd , ent->d_name);
+		char fullPath[PATH_MAX];
+		snprintf(fullPath,sizeof(fullPath),"%s/%s" , cd , ent->d_name);
 		if (ent->d_type == DT_DIR) {
 			// dir
 			clearDir(fullPath);
@@ -75,16 +77,14 @@ int objectMetadata(char *file , char *objectPath) {
  	//Path=/home/romeo/.bash_history
 	//DeletionDate=2026-06-26T20:44:27
 	char *data = "[Trash Info]\nPath=";
-	char *datax = concatStrings(data,objectPath);
-	size_t size = strlen(datax);
-	if ( write(fd, datax , size) < 0 ) {
+	char x[strlen(data) + strlen(objectPath) + 1];
+	concatStringsNoMalloc(x,sizeof(x),data,objectPath);
+	if ( write(fd, x , sizeof(x)) < 0 ) {
 		perror("write");
 		close(fd);
-		freeObject(datax);
 		return 1;
 	}
 	close(fd);
-	freeObject(datax);
 	return 0;
 }
 
@@ -134,16 +134,17 @@ char *concatStrings(const char *s1, const char *s2) {
 
 char *loopTrashForRedundancy(const char *trash , const char *fileName) {
 	char *result = NULL;
-	char *fileToCheck = concatStrings(trash,fileName);
+	char fileToCheck[PATH_MAX];
+	concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,fileName);
     if (access(fileToCheck , F_OK) == 0) {
 		time_t now = time(NULL);
 		char timeStr[32];
 		strftime(timeStr, sizeof timeStr, "@%Y-%m-%d_%H-%M-%S", localtime(&now));
 		result = concatStrings(fileName , timeStr);
 	}
-    freeObject(fileToCheck);
     return result;
 }
+
 int flagHand(char *arg, char *trash, char* meta) {
 	// return 1 if flag is handled, 0 if its not flag, -1 to disable flags
 	if ( arg[0] == '-' && arg[1] == '-' ) {
@@ -155,12 +156,10 @@ int flagHand(char *arg, char *trash, char* meta) {
 					clearDir(cd);
 				}
 				return 1;
-				// remove everthing in trash
 			}
 			if (strcmp("--restore",arg) == 0 ) {
 				printf("im restore\n");
 				return 1;
-				// remove everthing in trash
 			}
 			if (strcmp("--show",arg) == 0 ) {
 				viewDir(trash);
@@ -173,28 +172,4 @@ int flagHand(char *arg, char *trash, char* meta) {
 
 	}
 	return 0;
-}
-
-int createDirctory(const char *s) {
-    int exitStatus = mkdir(s,0700);
-    if ( exitStatus == 0 ) {
-        printf("succesfully created a dir: %s\n" , s);
-        return 0;
-    }
-    else if (errno == EEXIST ) {
-        fprintf(stderr , "%s already exits" , s);
-		return 0;
-    }
-
-    else if (errno == EDQUOT || errno == ENOSPC) {
-        fprintf(stderr, "No Space\n");
-        return 1;
-    }
-
-    else if (errno == ENOENT ) {
-        fprintf(stderr ,"parent dirctories don't exit \n");
-        return 1;
-    }
-
-    return -1;
 }

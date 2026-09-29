@@ -1,3 +1,4 @@
+#include <linux/limits.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -11,30 +12,32 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	char path[512];
+	char path[PATH_MAX];
 	if ( getcwd(path , sizeof path) == NULL ) return EXIT_FAILURE;
 
-	if ( addSlashEnd(path,512) ) return EXIT_FAILURE;
+	if ( addSlashEnd(path,PATH_MAX) ) return EXIT_FAILURE;
 
-	const char *dataPath = getenv("XDG_DATA_HOME");
+	char dataPath[PATH_MAX];
 
-	if(!dataPath) {
-	const char *homePath = getenv("HOME");
-	if(!homePath) return EXIT_FAILURE;
-		dataPath = concatStrings(homePath,"/.local/share");
+	char *xdgData = getenv("XDG_DATA_HOME");
+
+	if(!xdgData) {
+		char *homePath = getenv("HOME");
+		concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share");
+	} else {
+		concatStringsNoMalloc(dataPath,sizeof(dataPath),xdgData,"");
 	}
 
-	char *trash = concatStrings(dataPath , "/Trash/files/");
+	char trash[PATH_MAX];
+	concatStringsNoMalloc(trash,sizeof(trash),dataPath,"/Trash/files/");
 
 	if ( access(trash , F_OK) < 0 ) {
 		perror("Trash Directory Access");
-	//	if(	createDirctory(trash) != 0 ) {
-	//		fprintf(stderr , "failed to create a dirctory\n");
-	//		return EXIT_FAILURE;
-	//	}
+		return EXIT_FAILURE;
 	}
 
-	char *meta = concatStrings(dataPath,"/Trash/info/");
+	char meta[PATH_MAX];
+	concatStringsNoMalloc(meta,sizeof(meta),dataPath,"/Trash/info/");
 
 	_Bool disableFlag = 0;
 	int status = 0;
@@ -54,8 +57,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		char *pathObject 	= NULL;
-		char *newPathObject = NULL;
+		char pathObject    [PATH_MAX];
+		char newPathObject [PATH_MAX];
 		char *objectName    = NULL;
 
 		objectName = retNameLastDash(arg);
@@ -65,59 +68,48 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		/// absolute path # find a way to assign object path to arg and not get free error
 		if ( arg[0] == '/' ){
-			pathObject = concatStrings("",arg);
+			concatStringsNoMalloc(pathObject,sizeof(pathObject) , "",arg);
 		} else {
-			pathObject = concatStrings(path,arg);
+			concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg);
 		}
 
 		if ( access(pathObject , F_OK ) < 0) {
-			perror("object access");
-			//fprintf(stderr ,"object %s not found\n" , pathObject);
-			freeObject(pathObject);
+			perror("object Access");
 			freeObject(objectName);
 			status = 2;
 			continue;
 		}
-		// check in trash for equivlent object name
+
 		char *objectTrashName = loopTrashForRedundancy(trash,objectName);
 		_Bool toFree = objectTrashName;
 
-		// if no new name was assigned
 		if (!objectTrashName ) objectTrashName = objectName;
 
-		newPathObject = concatStrings(trash , objectTrashName);
+		concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName);
 
 		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
-			perror("rename");
-			//fprintf(stderr, "couldn't move object To Trash\n");
+			perror("Moving Object");
+			freeObject(objectName);
 			if (toFree) freeObject(objectTrashName);
-			freeObject(pathObject);
-			freeObject(newPathObject);
 			status = 2;
 			continue;
 		}
 
 		// create a metadat file
-		char *metadataPath = concatStrings(meta,objectTrashName);
-		char *file = concatStrings(metadataPath , ".trashinfo");
+		char metadataPath[PATH_MAX];
+		concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName);
+		char file[PATH_MAX];
+		concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo");
 		//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
 		objectMetadata(file, pathObject);
 
-		freeObject(metadataPath);
-		freeObject(file);
-
 	 	if (toFree) freeObject(objectTrashName);
-		freeObject(pathObject);
 		freeObject(objectName);
-		freeObject(newPathObject);
 
 	} // end of for
 
-	freeObject(trash);
-	freeObject(meta);
 	return status;
  }

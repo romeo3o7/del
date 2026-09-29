@@ -16,6 +16,6 @@ char *concatStrings(const char *s1, const char *s2);
 
 int objectMetadata(char *metadataPath , char *objectPath);
 
-char *concatStringsNoMalloc(const char *s1 , const char *s2);
-
 char *loopTrashForRedundancy(const char *trash , const char *fileName);
+
+char *concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2);
