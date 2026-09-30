@@ -4,7 +4,7 @@ void clearDir(char *dir);
 
 void freeObject(char *s);
 
-char *retNameLastDash(char *arg);
+char *baseNamePath(char *dest, char *name);
 
 int createDirctory(const char *s);
 

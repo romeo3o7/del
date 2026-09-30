@@ -61,14 +61,9 @@ int main(int argc, char *argv[]) {
 
 		char pathObject    [PATH_MAX];
 		char newPathObject [PATH_MAX];
-		char *objectName    = NULL;
+		char objectName   [PATH_MAX];
 
-		objectName = retNameLastDash(arg);
-		if (!objectName) {
-			fprintf(stderr,"failed to extract name\n");
-			status = 2;
-			continue;
-		}
+		baseNamePath(objectName, arg);
 
 		if ( arg[0] == '/' ){
 			concatStringsNoMalloc(pathObject,sizeof(pathObject) , "",arg);
@@ -78,7 +73,6 @@ int main(int argc, char *argv[]) {
 
 		if ( access(pathObject , F_OK ) < 0) {
 			perror("object Access");
-			freeObject(objectName);
 			status = 2;
 			continue;
 		}
@@ -94,7 +88,6 @@ int main(int argc, char *argv[]) {
 
 		if (rename(pathObject,newPathObject) < 0) {
 			perror("Moving Object");
-			freeObject(objectName);
 			if (toFree) freeObject(objectTrashName);
 			status = 2;
 			continue;
@@ -109,7 +102,6 @@ int main(int argc, char *argv[]) {
 		objectMetadata(file, pathObject);
 
 	 	if (toFree) freeObject(objectTrashName);
-		freeObject(objectName);
 
 	} // end of for
 

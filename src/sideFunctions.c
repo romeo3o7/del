@@ -88,33 +88,21 @@ int objectMetadata(char *file , char *objectPath) {
 	return 0;
 }
 
-char *retNameLastDash(char *arg) {
-	size_t len = strlen(arg);
-	if (len == 0) return NULL;
-	int i = (int)len;
-	while (len > 0 && i > 0 && arg[i - 1] == '/') {
-		len--;
-		i--;
-	}
-	if (len == 0) return NULL;
+char *baseNamePath(char *dest, char *arg) {
+    size_t len = strlen(arg);
+    if (len == 0) return NULL;
 
-	char name[512];
-	int j = 0;
-	for(int i = (int)len - 1; i >= 0 && arg[i] != '/'; i--) {
-		name[j++] = arg[i];
-	}
-	name[j] = '\0';
-	size_t nameLen = strlen(name);
+    size_t right = len - 1;
+    while (right > 0 && arg[right] == '/') right--;
 
-	char *result = malloc(nameLen + 2);
-	if (!result) return NULL;
+    size_t left = right;
+    while (left > 0 && arg[left - 1] != '/') left--;
 
-	int x = 0;
-	for(int i = (int)nameLen - 1; i >= 0; i--) {
-		result[x++] = name[i];
-	}
-	result[x] = '\0';
-	return result;
+    size_t delta = right - left + 1;
+
+    memcpy(dest, arg + left, delta);
+    dest[delta] = '\0';
+    return dest;
 }
 
 char *concatStrings(const char *s1, const char *s2) {
