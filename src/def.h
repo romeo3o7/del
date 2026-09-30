@@ -20,4 +20,4 @@ int objectMetadata(char *metadataPath , char *objectPath);
 
 int loopTrashForRedundancy(char *dest , const char *trash , const char *fileName);
 
-char *concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2);
+int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2);

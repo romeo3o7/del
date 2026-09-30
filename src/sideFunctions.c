@@ -11,9 +11,17 @@ void freeObject(char *s) {
 	if(s) free(s);
 }
 
-char *concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2) {
-    snprintf(dest, destSize, "%s%s", s1, s2);
-    return dest;
+int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2) {
+	if(destSize == 0) return 1;
+	size_t s1Size = strlen(s1);
+	size_t s2Size = strlen(s2);
+	if (s1Size + s2Size + 1 > destSize ) return 1;
+
+	memcpy(dest,s1,s1Size);
+	memcpy(dest + s1Size ,s2,s2Size);
+
+	dest[s1Size + s2Size] = '\0';
+	return 0;
 }
 
 void clearDir(char *cd) {

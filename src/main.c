@@ -28,6 +28,8 @@ int main(int argc, char *argv[]) {
 		if (!homePath) return EXIT_FAILURE;
 		concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share");
 	} else {
+		size_t xdgSize = strlen(xdgData);
+		if (xdgSize >= sizeof(dataPath)) return EXIT_FAILURE;
 		strcpy(dataPath,xdgData);
 	}
 
@@ -69,7 +71,6 @@ int main(int argc, char *argv[]) {
 
 		if ( arg[0] == '/' ){
 			strcpy(pathObject,arg);
-			//concatStringsNoMalloc(pathObject,sizeof(pathObject) , "",arg);
 		} else {
 			concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg);
 		}
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
 
 		concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName);
 
-		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
+		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
 			perror("Moving Object");
@@ -98,7 +99,7 @@ int main(int argc, char *argv[]) {
 		concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName);
 		char file[PATH_MAX];
 		concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo");
-		printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
+		//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
 		objectMetadata(file, pathObject);
 
 	} // end of for
