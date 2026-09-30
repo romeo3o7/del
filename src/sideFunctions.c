@@ -120,17 +120,17 @@ char *concatStrings(const char *s1, const char *s2) {
     return newString;
 }
 
-char *loopTrashForRedundancy(const char *trash , const char *fileName) {
-	char *result = NULL;
+int loopTrashForRedundancy(char *dest , const char *trash , const char *fileName) {
 	char fileToCheck[PATH_MAX];
 	concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,fileName);
     if (access(fileToCheck , F_OK) == 0) {
 		time_t now = time(NULL);
 		char timeStr[32];
 		strftime(timeStr, sizeof timeStr, "@%Y-%m-%d_%H-%M-%S", localtime(&now));
-		result = concatStrings(fileName , timeStr);
+		concatStringsNoMalloc(dest, PATH_MAX , fileName , timeStr);
+		return 0;
 	}
-    return result;
+    return 1;
 }
 
 int flagHand(char *arg, char *trash, char* meta) {

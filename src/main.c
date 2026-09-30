@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <error.h>
 #include "def.h"
 
@@ -27,7 +28,7 @@ int main(int argc, char *argv[]) {
 		if (!homePath) return EXIT_FAILURE;
 		concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share");
 	} else {
-		concatStringsNoMalloc(dataPath,sizeof(dataPath),xdgData,"");
+		strcpy(dataPath,xdgData);
 	}
 
 	char trash[PATH_MAX];
@@ -59,14 +60,16 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		char pathObject    [PATH_MAX];
-		char newPathObject [PATH_MAX];
-		char objectName   [PATH_MAX];
+		char pathObject      [PATH_MAX];
+		char newPathObject   [PATH_MAX];
+		char objectName      [PATH_MAX];
+		char objectTrashName [PATH_MAX];
 
 		baseNamePath(objectName, arg);
 
 		if ( arg[0] == '/' ){
-			concatStringsNoMalloc(pathObject,sizeof(pathObject) , "",arg);
+			strcpy(pathObject,arg);
+			//concatStringsNoMalloc(pathObject,sizeof(pathObject) , "",arg);
 		} else {
 			concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg);
 		}
@@ -77,18 +80,15 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		char *objectTrashName = loopTrashForRedundancy(trash,objectName);
-		_Bool toFree = objectTrashName;
-
-		if (!objectTrashName ) objectTrashName = objectName;
+		int trName = loopTrashForRedundancy(objectTrashName,trash,objectName);
+		if (trName) strcpy(objectTrashName,objectName);
 
 		concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName);
 
-		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
+		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
 			perror("Moving Object");
-			if (toFree) freeObject(objectTrashName);
 			status = 2;
 			continue;
 		}
@@ -98,10 +98,8 @@ int main(int argc, char *argv[]) {
 		concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName);
 		char file[PATH_MAX];
 		concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo");
-		//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
+		printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
 		objectMetadata(file, pathObject);
-
-	 	if (toFree) freeObject(objectTrashName);
 
 	} // end of for
 
