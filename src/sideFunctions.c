@@ -96,9 +96,9 @@ int objectMetadata(char *file , char *objectPath) {
 	return 0;
 }
 
-char *baseNamePath(char *dest, char *arg) {
+int baseNamePath(char *dest, char *arg) {
     size_t len = strlen(arg);
-    if (len == 0) return NULL;
+    if (len == 0) return 1;
 
     size_t right = len - 1;
     while (right > 0 && arg[right] == '/') right--;
@@ -110,7 +110,7 @@ char *baseNamePath(char *dest, char *arg) {
 
     memcpy(dest, arg + left, delta);
     dest[delta] = '\0';
-    return dest;
+    return 0;
 }
 
 char *concatStrings(const char *s1, const char *s2) {
@@ -136,9 +136,9 @@ int loopTrashForRedundancy(char *dest , const char *trash , const char *fileName
 		char timeStr[32];
 		strftime(timeStr, sizeof timeStr, "@%Y-%m-%d_%H-%M-%S", localtime(&now));
 		concatStringsNoMalloc(dest, PATH_MAX , fileName , timeStr);
-		return 0;
+		return 1;
 	}
-    return 1;
+    return 0;
 }
 
 int flagHand(char *arg, char *trash, char* meta) {

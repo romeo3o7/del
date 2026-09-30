@@ -15,9 +15,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	char path[PATH_MAX];
-	if ( getcwd(path , sizeof path) == NULL ) return EXIT_FAILURE;
+	if (getcwd(path , sizeof path) == NULL) return EXIT_FAILURE;
 
-	if ( addSlashEnd(path,PATH_MAX) ) return EXIT_FAILURE;
+	if (addSlashEnd(path,PATH_MAX)) return EXIT_FAILURE;
 
 	char dataPath[PATH_MAX];
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 	if(!xdgData) {
 		char *homePath = getenv("HOME");
 		if (!homePath) return EXIT_FAILURE;
-		concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share");
+		if (concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share")) return EXIT_FAILURE;
 	} else {
 		size_t xdgSize = strlen(xdgData);
 		if (xdgSize >= sizeof(dataPath)) return EXIT_FAILURE;
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	char trash[PATH_MAX];
-	concatStringsNoMalloc(trash,sizeof(trash),dataPath,"/Trash/files/");
+	if (concatStringsNoMalloc(trash,sizeof(trash),dataPath,"/Trash/files/")) return EXIT_FAILURE;
 
 	if ( access(trash , F_OK) < 0 ) {
 		perror("Trash Directory Access");
@@ -42,7 +42,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	char meta[PATH_MAX];
-	concatStringsNoMalloc(meta,sizeof(meta),dataPath,"/Trash/info/");
+	if (concatStringsNoMalloc(meta,sizeof(meta),dataPath,"/Trash/info/")) return EXIT_FAILURE;
+
+	if ( access(meta , F_OK) < 0 ) {
+		perror("meta Directory Access");
+		return EXIT_FAILURE;
+	}
 
 	_Bool disableFlag = 0;
 	int status = 0;
@@ -67,26 +72,29 @@ int main(int argc, char *argv[]) {
 		char objectName      [PATH_MAX];
 		char objectTrashName [PATH_MAX];
 
-		baseNamePath(objectName, arg);
+		if (baseNamePath(objectName, arg)) continue;
 
-		if ( arg[0] == '/' ){
+		if ( arg[0] == '/' ) {
+			size_t alen = strlen(arg);
+			if (alen > sizeof(pathObject)) continue;
 			strcpy(pathObject,arg);
 		} else {
-			concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg);
+			if (concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg)) continue;
 		}
 
-		if ( access(pathObject , F_OK ) < 0) {
+
+		if (access(pathObject , F_OK ) < 0) {
 			perror("object Access");
 			status = 2;
 			continue;
 		}
 
 		int trName = loopTrashForRedundancy(objectTrashName,trash,objectName);
-		if (trName) strcpy(objectTrashName,objectName);
+		if (!trName) strcpy(objectTrashName,objectName);
 
-		concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName);
+		if (concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName)) continue;
 
-		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
+		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
 			perror("Moving Object");
@@ -96,11 +104,11 @@ int main(int argc, char *argv[]) {
 
 		// create a metadat file
 		char metadataPath[PATH_MAX];
-		concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName);
+		if (concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName)) continue;
 		char file[PATH_MAX];
-		concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo");
-		//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
-		objectMetadata(file, pathObject);
+		if (concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo")) continue;
+		printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
+		if (objectMetadata(file, pathObject)) continue;
 
 	} // end of for
 
