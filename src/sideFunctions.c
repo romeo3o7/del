@@ -65,13 +65,12 @@ int viewDir(const char *cd) {
 
 _Bool addSlashEnd(char *s , size_t len) {
 	size_t size = strlen(s);
-	if (size + 1 < len) {
-		s[size] = '/';
-		s[size + 1] = '\0';
-	} else {
-		fprintf( stderr , "path is overflown\n");
+	if (size + 1 > len) {
+		fprintf(stderr,"string overflow,slash\n");
 		return 1;
 	}
+	s[size] = '/';
+	s[size + 1] = '\0';
 	return 0;
 }
 
@@ -128,17 +127,21 @@ char *concatStrings(const char *s1, const char *s2) {
     return newString;
 }
 
-int loopTrashForRedundancy(char *dest , const char *trash , const char *fileName) {
-	char fileToCheck[PATH_MAX];
-	concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,fileName);
-    if (access(fileToCheck , F_OK) == 0) {
-		time_t now = time(NULL);
-		char timeStr[32];
-		strftime(timeStr, sizeof timeStr, "@%Y-%m-%d_%H-%M-%S", localtime(&now));
-		concatStringsNoMalloc(dest, PATH_MAX , fileName , timeStr);
-		return 1;
+int popTrashName(char *dest ,size_t destSize, const char *trash , const char *fileName) {
+	char candidateName [PATH_MAX];
+	char fileToCheck   [PATH_MAX];
+
+	strcpy(candidateName,fileName);
+	unsigned int i = 1;
+	while(1) {
+		if (concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,candidateName)) return 1;
+		if (access(fileToCheck, F_OK) != 0) break;
+		char id[32];
+		snprintf(id,sizeof(id),".%u" , i++);
+
+		if (concatStringsNoMalloc(candidateName, sizeof(candidateName),fileName , id )) return 1;
 	}
-    return 0;
+	 return concatStringsNoMalloc(dest,destSize,candidateName,"");
 }
 
 int flagHand(char *arg, char *trash, char* meta) {

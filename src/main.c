@@ -1,5 +1,6 @@
 #include <linux/limits.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,9 +16,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	char path[PATH_MAX];
-	if (getcwd(path , sizeof path) == NULL) return EXIT_FAILURE;
+	if (getcwd(path , sizeof path) == NULL) {
+		fprintf(stderr,"getcwd: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
 
-	if (addSlashEnd(path,PATH_MAX)) return EXIT_FAILURE;
+	if (addSlashEnd(path,sizeof(path))) return EXIT_FAILURE;
 
 	char dataPath[PATH_MAX];
 
@@ -37,7 +41,7 @@ int main(int argc, char *argv[]) {
 	if (concatStringsNoMalloc(trash,sizeof(trash),dataPath,"/Trash/files/")) return EXIT_FAILURE;
 
 	if ( access(trash , F_OK) < 0 ) {
-		perror("Trash Directory Access");
+		fprintf(stderr,"Trash Directory Access: %s\n", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -45,7 +49,7 @@ int main(int argc, char *argv[]) {
 	if (concatStringsNoMalloc(meta,sizeof(meta),dataPath,"/Trash/info/")) return EXIT_FAILURE;
 
 	if ( access(meta , F_OK) < 0 ) {
-		perror("meta Directory Access");
+		fprintf(stderr,"Meta Directory Access: %s\n", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -84,20 +88,22 @@ int main(int argc, char *argv[]) {
 
 
 		if (access(pathObject , F_OK ) < 0) {
-			perror("object Access");
+			fprintf(stderr,"Object Access: %s\n",strerror(errno));
 			status = 2;
 			continue;
 		}
 
-		int trName = loopTrashForRedundancy(objectTrashName,trash,objectName);
-		if (!trName) strcpy(objectTrashName,objectName);
+		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName) != 0) {
+			fprintf(stderr,"fail Trash Name\n");
+			continue;
+		}
 
 		if (concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName)) continue;
 
 		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
-			perror("Moving Object");
+			fprintf(stderr,"Moving Object: %s\n", strerror(errno));
 			status = 2;
 			continue;
 		}
