@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
@@ -74,26 +75,6 @@ _Bool addSlashEnd(char *s , size_t len) {
 	return 0;
 }
 
-int objectMetadata(char *file , char *objectPath) {
-	int fd = open(file,O_RDWR | O_CREAT,0600);
-	if (fd < 0) {
-		perror("open");
-		return 1;
-	}
-	// [Trash Info]
- 	//Path=/home/romeo/.bash_history
-	//DeletionDate=2026-06-26T20:44:27
-	char *data = "[Trash Info]\nPath=";
-	char x[strlen(data) + strlen(objectPath) + 1];
-	concatStringsNoMalloc(x,sizeof(x),data,objectPath);
-	if ( write(fd, x , sizeof(x)) < 0 ) {
-		perror("write");
-		close(fd);
-		return 1;
-	}
-	close(fd);
-	return 0;
-}
 
 int baseNamePath(char *dest, char *arg) {
     size_t len = strlen(arg);
@@ -176,3 +157,56 @@ int flagHand(char *arg, char *trash, char* meta) {
 void usage() {
 	printf("del [object]\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n");
 }
+
+int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath) {
+	char metadataPath[PATH_MAX];
+	if (concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName)) return 1;
+
+	char file[PATH_MAX];
+	if (concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo")) return 1;
+
+	//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
+
+	int fd = open(file, O_WRONLY | O_CREAT,0600);
+	if (fd < 0) {
+		fprintf(stderr,"file descriptor: %s\n", strerror(errno));
+		return 1;
+	}
+
+	char *x = "[Trash Info]\nPath=";
+
+	char data[PATH_MAX + NAME_MAX + 32];
+	if (concatStringsNoMalloc(data,sizeof(data),x,objectPath)) {
+		close(fd);
+		return 1;
+	}
+
+	size_t dlen = strlen(data);
+	data[dlen++] = '\n';
+	data[dlen] = '\0';
+
+	char deletionTime[32];
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+
+    if (!tm || strftime(deletionTime, sizeof(deletionTime),"%Y-%m-%dT%H:%M:%S", tm) == 0) {
+        close(fd);
+        return 1;
+    }
+
+	char *y = "DeletionDate=";
+
+	if (concatStringsNoMalloc(data + dlen ,sizeof(data) - dlen ,y,deletionTime)) {
+		close(fd);
+		return 1;
+	}
+
+	if (write(fd, data , strlen(data)) < 0 ) {
+		fprintf(stderr,"Writing to file: %s\n", strerror(errno));
+		close(fd);
+		return 1;
+	}
+	close(fd);
+	return 0;
+}
+

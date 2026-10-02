@@ -1,7 +1,7 @@
 .SILENT:
 
 CC = gcc
-CFLAGS = -Wall -Wextra -Wpedantic -Werror -pedantic -O2
+CFLAGS = -Wall -Wextra -Wpedantic -Werror -O2
 FILES = src/sideFunctions.c src/main.c
 
 build: $(FILES)

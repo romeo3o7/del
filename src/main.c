@@ -86,15 +86,9 @@ int main(int argc, char *argv[]) {
 			if (concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg)) continue;
 		}
 
-
-		if (access(pathObject , F_OK ) < 0) {
-			fprintf(stderr,"Object Access: %s\n",strerror(errno));
-			status = 2;
-			continue;
-		}
-
 		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName) != 0) {
 			fprintf(stderr,"fail Trash Name\n");
+			status = 2;
 			continue;
 		}
 
@@ -109,12 +103,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// create a metadat file
-		char metadataPath[PATH_MAX];
-		if (concatStringsNoMalloc(metadataPath, sizeof(metadataPath),meta,objectTrashName)) continue;
-		char file[PATH_MAX];
-		if (concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo")) continue;
-		printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
-		if (objectMetadata(file, pathObject)) continue;
+		if (objectMetadata(meta,objectTrashName,pathObject)) continue;
 
 	} // end of for
 
