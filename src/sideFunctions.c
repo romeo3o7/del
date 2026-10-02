@@ -16,7 +16,10 @@ int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const cha
 	if(destSize == 0) return 1;
 	size_t s1Size = strlen(s1);
 	size_t s2Size = strlen(s2);
-	if (s1Size + s2Size + 1 > destSize ) return 1;
+	if (s1Size + s2Size + 1 > destSize ) {
+		fprintf(stderr,"argument too large");
+		return 1;
+	}
 
 	memcpy(dest,s1,s1Size);
 	memcpy(dest + s1Size ,s2,s2Size);
@@ -66,7 +69,7 @@ int viewDir(const char *cd) {
 
 _Bool addSlashEnd(char *s , size_t len) {
 	size_t size = strlen(s);
-	if (size + 1 > len) {
+	if (size + 2 > len) {
 		fprintf(stderr,"string overflow,slash\n");
 		return 1;
 	}
@@ -108,11 +111,12 @@ char *concatStrings(const char *s1, const char *s2) {
     return newString;
 }
 
-int popTrashName(char *dest ,size_t destSize, const char *trash , const char *fileName) {
+int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName , size_t objectNameSize) {
 	char candidateName [PATH_MAX];
 	char fileToCheck   [PATH_MAX];
 
-	strcpy(candidateName,fileName);
+	if (objectNameSize > sizeof(candidateName)) return 1;
+	strcpy(candidateName,objectName);
 	unsigned int i = 1;
 	while(1) {
 		if (concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,candidateName)) return 1;
@@ -120,7 +124,7 @@ int popTrashName(char *dest ,size_t destSize, const char *trash , const char *fi
 		char id[32];
 		snprintf(id,sizeof(id),".%u" , i++);
 
-		if (concatStringsNoMalloc(candidateName, sizeof(candidateName),fileName , id )) return 1;
+		if (concatStringsNoMalloc(candidateName, sizeof(candidateName),objectName , id )) return 1;
 	}
 	 return concatStringsNoMalloc(dest,destSize,candidateName,"");
 }
@@ -155,7 +159,7 @@ int flagHand(char *arg, char *trash, char* meta) {
 	return 0;
 }
 void usage() {
-	printf("del [object]\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n");
+	printf("del [object] (to delete an object)\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n");
 }
 
 int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath) {

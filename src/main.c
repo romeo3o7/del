@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-#include <error.h>
 #include "def.h"
 
 int main(int argc, char *argv[]) {
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			else if (flagReturn == -1) {
-				printf("disabling flags\n");
+				//printf("disabling flags\n");
 				disableFlag = 1;
 				continue;
 			}
@@ -76,17 +75,26 @@ int main(int argc, char *argv[]) {
 		char objectName      [PATH_MAX];
 		char objectTrashName [PATH_MAX];
 
-		if (baseNamePath(objectName, arg)) continue;
+		if (baseNamePath(objectName, arg)) {
+			fprintf(stderr,"base name for %s failed\n",arg);
+			status = 2;
+			continue;
+		}
 
 		if ( arg[0] == '/' ) {
 			size_t alen = strlen(arg);
-			if (alen > sizeof(pathObject)) continue;
+			if (alen > sizeof(pathObject)) {
+				fprintf(stderr,"argument is too large");
+				status = 2;
+				continue;
+			}
+
 			strcpy(pathObject,arg);
 		} else {
 			if (concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg)) continue;
 		}
 
-		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName) != 0) {
+		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName,sizeof(objectName)) != 0) {
 			fprintf(stderr,"fail Trash Name\n");
 			status = 2;
 			continue;
@@ -94,16 +102,19 @@ int main(int argc, char *argv[]) {
 
 		if (concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName)) continue;
 
-		printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
+		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 
 		if (rename(pathObject,newPathObject) < 0) {
-			fprintf(stderr,"Moving Object: %s\n", strerror(errno));
+			fprintf(stderr,"del Object: %s\n", strerror(errno));
 			status = 2;
 			continue;
 		}
 
 		// create a metadat file
-		if (objectMetadata(meta,objectTrashName,pathObject)) continue;
+		if (objectMetadata(meta,objectTrashName,pathObject)) {
+			status = 2;
+			continue;
+		}
 
 	} // end of for
 

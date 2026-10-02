@@ -18,6 +18,6 @@ char *concatStrings(const char *s1, const char *s2);
 
 int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2);
 
-int popTrashName(char *dest ,size_t destSize, const char *trash , const char *fileName);
-
 int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath);
+
+int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName , size_t objectNameSize);
