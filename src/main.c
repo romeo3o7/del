@@ -9,7 +9,8 @@
 int main(int argc, char *argv[]) {
 
 	if (argc == 1) {
-		fprintf(stderr , "include an object to delete\n");
+		char msg[] = "include an object to delete\n";
+		write(2 ,msg,sizeof(msg));
 		usage();
 		return EXIT_FAILURE;
 	}
@@ -32,7 +33,11 @@ int main(int argc, char *argv[]) {
 		if (concatStringsNoMalloc(dataPath,sizeof(dataPath),homePath,"/.local/share")) return EXIT_FAILURE;
 	} else {
 		size_t xdgSize = strlen(xdgData);
-		if (xdgSize >= sizeof(dataPath)) return EXIT_FAILURE;
+		if (xdgSize >= sizeof(dataPath)) {
+			char msg[] = "XDG_DATA Path is too Large";
+			write(2,msg,sizeof(msg));
+			return EXIT_FAILURE;
+		}
 		strcpy(dataPath,xdgData);
 	}
 
@@ -60,7 +65,7 @@ int main(int argc, char *argv[]) {
 
 		if (!disableFlag) {
 			int flagReturn = flagHand(arg,trash,meta);
-			if (flagReturn == 1) {
+			if (flagReturn == 0) {
 				continue;
 			}
 			else if (flagReturn == -1) {
@@ -72,10 +77,10 @@ int main(int argc, char *argv[]) {
 
 		char pathObject      [PATH_MAX];
 		char newPathObject   [PATH_MAX];
-		char objectName      [PATH_MAX];
-		char objectTrashName [PATH_MAX];
+		char objectName      [NAME_MAX];
+		char objectTrashName [NAME_MAX];
 
-		if (baseNamePath(objectName, arg)) {
+		if (baseNamePath(objectName,sizeof(objectName) , arg)) {
 			fprintf(stderr,"base name for %s failed\n",arg);
 			status = 2;
 			continue;
@@ -84,7 +89,8 @@ int main(int argc, char *argv[]) {
 		if ( arg[0] == '/' ) {
 			size_t alen = strlen(arg);
 			if (alen > sizeof(pathObject)) {
-				fprintf(stderr,"argument is too large");
+				char msg[] = "full path Argument is too Large";
+				write(2,msg,sizeof(msg));
 				status = 2;
 				continue;
 			}
@@ -95,7 +101,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName,sizeof(objectName)) != 0) {
-			fprintf(stderr,"fail Trash Name\n");
+			char msg[] = "Fail Trash Name\n";
+			write(2,msg,sizeof(msg));
 			status = 2;
 			continue;
 		}

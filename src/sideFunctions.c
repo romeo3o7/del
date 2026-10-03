@@ -17,7 +17,8 @@ int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const cha
 	size_t s1Size = strlen(s1);
 	size_t s2Size = strlen(s2);
 	if (s1Size + s2Size + 1 > destSize ) {
-		fprintf(stderr,"argument too large");
+		char msg[] = "concating strings :argument too large\n";
+		write(2,msg,sizeof(msg));
 		return 1;
 	}
 
@@ -79,8 +80,9 @@ _Bool addSlashEnd(char *s , size_t len) {
 }
 
 
-int baseNamePath(char *dest, char *arg) {
+int baseNamePath(char *dest, size_t destSize, char *arg) {
     size_t len = strlen(arg);
+	if (len > destSize) return 1;
     if (len == 0) return 1;
 
     size_t right = len - 1;
@@ -112,17 +114,17 @@ char *concatStrings(const char *s1, const char *s2) {
 }
 
 int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName , size_t objectNameSize) {
-	char candidateName [PATH_MAX];
+	char candidateName [NAME_MAX];
 	char fileToCheck   [PATH_MAX];
 
 	if (objectNameSize > sizeof(candidateName)) return 1;
 	strcpy(candidateName,objectName);
-	unsigned int i = 1;
+	size_t i = 1;
 	while(1) {
 		if (concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,candidateName)) return 1;
 		if (access(fileToCheck, F_OK) != 0) break;
 		char id[32];
-		snprintf(id,sizeof(id),".%u" , i++);
+		snprintf(id,sizeof(id),".%zu" , i++);
 
 		if (concatStringsNoMalloc(candidateName, sizeof(candidateName),objectName , id )) return 1;
 	}
@@ -130,7 +132,7 @@ int popTrashName(char *dest ,size_t destSize, const char *trash , const char *ob
 }
 
 int flagHand(char *arg, char *trash, char* meta) {
-	// return 1 if flag is handled, 0 if its not flag, -1 to disable flags
+	// return 0 if flag is handled, 1 if its not flag and main should take controle, -1 to disable flags
 	if ( arg[0] == '-' && arg[1] == '-' ) {
 		if (!(strlen(arg) == 2)) {
 			if (strcmp("--clear",arg) == 0 ) {
@@ -139,27 +141,28 @@ int flagHand(char *arg, char *trash, char* meta) {
 					char *cd = dirs[i];
 					clearDir(cd);
 				}
-				return 1;
+				return 0;
 			}
 			if (strcmp("--restore",arg) == 0 ) {
 				printf("im restore\n");
-				return 1;
+				return 0;
 			}
 			if (strcmp("--show",arg) == 0 ) {
 				viewDir(trash);
-				return 1;
+				return 0;
 			}
 			fprintf(stderr,"flag not found\n");
 			usage();
-			return 1;
+			return 0;
 		}
 			return -1;
 
 	}
-	return 0;
+	return 1;
 }
 void usage() {
-	printf("del [object] (to delete an object)\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n");
+	char msg[] = "del [object] (to delete an object)\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n";
+	write(1,msg,sizeof(msg));
 }
 
 int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath) {
