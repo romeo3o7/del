@@ -64,8 +64,7 @@ int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const cha
 	size_t s1Size = strlen(s1);
 	size_t s2Size = strlen(s2);
 	if (s1Size + s2Size + 1 > destSize ) {
-		char msg[] = "concating strings :argument too large\n";
-		write(2,msg,sizeof(msg));
+		fprintf(stderr,"concating strings :argument too large\n");
 		return 1;
 	}
 
@@ -149,7 +148,6 @@ int popTrashName(char *dest ,size_t destSize, const char *trash , const char *ob
 	char candidateName [NAME_MAX];
 	char fileToCheck   [PATH_MAX];
 
-	if (objectNameSize > sizeof(candidateName)) return 1;
 	strcpy(candidateName,objectName);
 	size_t i = 1;
 	while(1) {
@@ -204,7 +202,7 @@ void usage() {
 		"Flags:\n\t--show\t\tto View Trash content\n"
 		"\t--clear\t\tto Clear Trash content\n\t--restore\tto restore the object (the object exact Trash name after the flag is needed)\n";
 
-	write(1,msg,sizeof(msg));
+	fprintf(stdout,"%s",msg);
 }
 
 int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath) {
