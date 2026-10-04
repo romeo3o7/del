@@ -64,14 +64,13 @@ int main(int argc, char *argv[]) {
 		char *arg = argv[i];
 
 		if (!disableFlag) {
-			int flagReturn = flagHand(arg,trash,meta);
-			if (flagReturn == 0) {
-				continue;
-			}
-			else if (flagReturn == -1) {
-				//printf("disabling flags\n");
-				disableFlag = 1;
-				continue;
+			int flagReturn = flagHand(arg,trash,meta, argv[i + 1] ? argv[i + 1] : NULL );
+			switch(flagReturn) {
+				case -1: status = 2; continue;
+				case -3: status = 2; i++; continue;
+				case 1: continue;
+				case 2: disableFlag = 1; continue;
+				case 3: i++; continue;
 			}
 		}
 

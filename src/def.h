@@ -10,11 +10,15 @@ int task(char*path,char *argument[]);
 
 _Bool addSlashEnd(char *s , size_t len);
 
-int flagHand(char *arg, char *trash, char *meta);
-
 char *concatStrings(const char *s1, const char *s2);
 
+int restoreObject(char *arg, char *trash, char* meta);
+
 int baseNamePath(char *dest, size_t destSize, char *arg);
+
+int flagHand(char *arg, char *trash, char *meta, char *argNext);
+
+void cleanRet(int fdToClose , char *addrToFree , char *msgToRet);
 
 int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2);
 

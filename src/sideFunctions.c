@@ -1,6 +1,6 @@
+#define _GNU_SOURCE
 #include <fcntl.h>
 #include <errno.h>
-#include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
 #include <time.h>
@@ -8,8 +8,55 @@
 #include <stdio.h>
 #include "def.h"
 
-void freeObject(char *s) {
-	if(s) free(s);
+int restoreObject(char *arg, char *trash, char* meta) {
+	char Tpath[PATH_MAX];
+	if (concatStringsNoMalloc(Tpath,sizeof(Tpath),trash,arg))
+		return 1;
+
+	char Mname[NAME_MAX];
+	if(concatStringsNoMalloc(Mname,sizeof(Mname),arg,".trashinfo"))
+		return 1;
+
+	char Mpath[PATH_MAX];
+	if (concatStringsNoMalloc(Mpath,sizeof(Mpath),meta,Mname))
+		return 1;
+
+	int fd = open(Mpath,O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr,"%s: %s\n","restore->open",strerror(errno));
+		return 1;
+	}
+
+	size_t header = sizeof("[Trash Info]\nPath=");
+	lseek(fd,header-1,SEEK_SET);
+
+	char buffer[PATH_MAX];
+	ssize_t biread = read(fd,buffer ,sizeof(buffer));
+	if ( biread  < 0 ) {
+		fprintf(stderr,"%s: %s\n","restore->read",strerror(errno));
+		close(fd);
+		return 1;
+	}
+	buffer[biread] = '\0';
+
+	char ogPath[PATH_MAX];
+	size_t o = 0;
+	for(;(buffer[o] != '\n') && (buffer[o] != '\0') ;o++)
+		ogPath[o] = buffer[o];
+	ogPath[o] = '\0';
+
+	if (renameat2(0,Tpath,0,ogPath,RENAME_NOREPLACE)) {
+		fprintf(stderr,"%s: %s\n","restore->rename",strerror(errno));
+		close(fd);
+		return 1;
+	}
+	if ( unlink(Mpath) < 0) {
+		fprintf(stderr,"%s: %s\n","restore->unlink",strerror(errno));
+		close(fd);
+		return 1;
+	}
+	close(fd);
+	return 0;
 }
 
 int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2) {
@@ -98,21 +145,6 @@ int baseNamePath(char *dest, size_t destSize, char *arg) {
     return 0;
 }
 
-char *concatStrings(const char *s1, const char *s2) {
-    size_t firstLen = strlen(s1);
-    size_t secondLen = strlen(s2);
-    char *newString = malloc(firstLen + secondLen + 1);
-
-	if(!newString) return NULL;
-
-    for (size_t i = 0; i < firstLen; i++) newString[i] = s1[i];
-
-    for (size_t j = 0; j < secondLen; j++) newString[firstLen + j] = s2[j];
-
-    newString[firstLen + secondLen] = '\0';
-    return newString;
-}
-
 int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName , size_t objectNameSize) {
 	char candidateName [NAME_MAX];
 	char fileToCheck   [PATH_MAX];
@@ -131,8 +163,10 @@ int popTrashName(char *dest ,size_t destSize, const char *trash , const char *ob
 	 return concatStringsNoMalloc(dest,destSize,candidateName,"");
 }
 
-int flagHand(char *arg, char *trash, char* meta) {
-	// return 0 if flag is handled, 1 if its not flag and main should take controle, -1 to disable flags
+int flagHand(char *arg, char *trash, char* meta, char *argNext) {
+	/* return 0 if main should take controle
+	 * return 1 if its a flag and is handled, -1 flag fails
+	 * 2 to disable flags, 3 to advance index, -3 to advance but with error*/
 	if ( arg[0] == '-' && arg[1] == '-' ) {
 		if (!(strlen(arg) == 2)) {
 			if (strcmp("--clear",arg) == 0 ) {
@@ -141,27 +175,35 @@ int flagHand(char *arg, char *trash, char* meta) {
 					char *cd = dirs[i];
 					clearDir(cd);
 				}
-				return 0;
+				return 1;
 			}
 			if (strcmp("--restore",arg) == 0 ) {
-				printf("im restore\n");
-				return 0;
+				if (!argNext) {
+					fprintf(stderr,"specify object to restore\n");
+					return -3;
+				}
+				if (restoreObject(argNext,trash,meta)) return -3;
+				return 3;
 			}
 			if (strcmp("--show",arg) == 0 ) {
-				viewDir(trash);
-				return 0;
+				if (viewDir(trash)) return -1;
+				return 1;
 			}
 			fprintf(stderr,"flag not found\n");
 			usage();
-			return 0;
+			return 1;
 		}
-			return -1;
-
+			return 2;
 	}
-	return 1;
+	return 0;
 }
 void usage() {
-	char msg[] = "del [object] (to delete an object)\ndel [flag]\ndel -- (to disable flags)\nFlags:\n--show  : to View Trash content\n--clear : to Clear Trash content\n";
+	char msg[] = 
+		"del [object] (to delete an object)\n" 
+		"del [flag]\ndel -- (to disable flags)\n"
+		"Flags:\n\t--show\t\tto View Trash content\n"
+		"\t--clear\t\tto Clear Trash content\n\t--restore\tto restore the object (the object exact Trash name after the flag is needed)\n";
+
 	write(1,msg,sizeof(msg));
 }
 
