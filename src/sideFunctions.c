@@ -63,17 +63,17 @@ int restoreObject(char *arg, char *trash, char* meta) {
 
 int rmObj(const char *obj) {
 	struct stat sb;
-	if (lstat(obj,&sb) < 0) {
+	if (lstat(obj,&sb) == -1) {
 		fprintf(stderr,"lstat failed : %s\n",strerror(errno));
 		return 1;
 	}
 
 	if (S_ISDIR(sb.st_mode)) {
 		clearDir(obj);
-		if (rmdir(obj) < 0)
+		if (rmdir(obj) == -1)
 			fprintf(stderr,"failed to remove dir %s: %s" , obj, strerror(errno));
 	} else {
-		if ( unlink(obj) < 0) {
+		if ( unlink(obj) == -1) {
 			fprintf(stderr,"%s: %s\n","restore->unlink",strerror(errno));
 			return 1;
 		}
@@ -112,11 +112,11 @@ int clearDir(const char *cd) {
 		if (ent->d_type == DT_DIR) {
 			// dir
 			clearDir(fullPath);
-			if (rmdir(fullPath) < 0)
+			if (rmdir(fullPath) == -1)
 				fprintf(stderr,"failed to remove dir %s: %s" , fullPath, strerror(errno));
 
 		} else  {
-			if (unlink(fullPath) < 0)
+			if (unlink(fullPath) == -1)
 				fprintf(stderr,"failed to remove file %s: %s" , fullPath, strerror(errno));
 		}
 	}
@@ -170,23 +170,6 @@ int baseNamePath(char *dest, size_t destSize, char *arg) {
     memcpy(dest, arg + left, delta);
     dest[delta] = '\0';
     return 0;
-}
-
-int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName) {
-	char candidateName [NAME_MAX];
-	char fileToCheck   [PATH_MAX];
-
-	strcpy(candidateName,objectName);
-	size_t i = 1;
-	while(1) {
-		if (concatStringsNoMalloc(fileToCheck, sizeof(fileToCheck), trash,candidateName)) return 1;
-		if (access(fileToCheck, F_OK) != 0) break;
-		char id[32];
-		snprintf(id,sizeof(id),".%zu" , i++);
-
-		if (concatStringsNoMalloc(candidateName, sizeof(candidateName),objectName , id )) return 1;
-	}
-	 return concatStringsNoMalloc(dest,destSize,candidateName,"");
 }
 
 int flagHand(char *arg, char *trash, char* meta, char *argNext) {

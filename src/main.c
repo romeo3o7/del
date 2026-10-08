@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <linux/limits.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -20,7 +21,13 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	if (addSlashEnd(path,sizeof(path))) return EXIT_FAILURE;
+	size_t size = strlen(path);
+	if (size + 2 > sizeof(path)) {
+		fprintf(stderr,"slash will overflow\n");
+		return EXIT_FAILURE;
+	}
+	path[size] = '/';
+	path[size + 1] = '\0';
 
 	char dataPath[PATH_MAX];
 
@@ -75,6 +82,7 @@ int main(int argc, char *argv[]) {
 		char pathObject      [PATH_MAX];
 		char newPathObject   [PATH_MAX];
 		char objectName      [NAME_MAX];
+		char candidateName   [NAME_MAX];
 		char objectTrashName [NAME_MAX];
 
 		if (baseNamePath(objectName,sizeof(objectName) , arg)) {
@@ -99,32 +107,28 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName) != 0) {
-			fprintf(stderr,"Fail Trash Name\n\n");
-			status = 2;
-			continue;
+		strcpy(candidateName,objectName);
+		size_t i = 1;
+		while(1) {
+			if (concatStringsNoMalloc(newPathObject, sizeof(newPathObject), trash,candidateName)) return 1;
+			int rename = renameat2(0,pathObject,0,newPathObject,RENAME_NOREPLACE);
+			if (rename == 0) break;
+			if (errno == EEXIST) {
+				char id[32];
+				snprintf(id,sizeof(id),".%zu" , i++);
+				if (concatStringsNoMalloc(candidateName, sizeof(candidateName),objectName , id )) return 1;
+				continue;
+			}
+				fprintf(stderr,"%s: %s\n","restore->rename",strerror(errno));
+				return 1;
 		}
 
-		if (concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName)) {
-			status = 2;
-			continue;
-		}
-
-		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
-
-		if (rename(pathObject,newPathObject) < 0) {
-			fprintf(stderr,"del Object: %s\n", strerror(errno));
-			status = 2;
-			continue;
-		}
-
-		// create a metadat file
 		if (objectMetadata(meta,objectTrashName,pathObject)) {
 			status = 2;
 			continue;
 		}
 
-	} // end of for
+	}
 
 	return status;
  }
