@@ -65,10 +65,10 @@ int main(int argc, char *argv[]) {
 			int flagReturn = flagHand(arg,trash,meta,argv[i + 1]);
 			switch(flagReturn) {
 				case -1: status = 2; continue;
-				case -3: status = 2; i++; continue;
+				case -3: return 2;
 				case 1: continue;
 				case 2: disableFlag = 1; continue;
-				case 3: i++; continue;
+				case 3: return 1;
 			}
 		}
 
@@ -85,24 +85,30 @@ int main(int argc, char *argv[]) {
 
 		if ( arg[0] == '/' ) {
 			size_t alen = strlen(arg);
-			if (alen > sizeof(pathObject)) {
+			if (alen >= sizeof(pathObject)) {
 				fprintf(stderr,"full path Argument is too Large\n");
 				status = 2;
 				continue;
 			}
-
 			strcpy(pathObject,arg);
+
 		} else {
-			if (concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg)) continue;
+			if (concatStringsNoMalloc(pathObject,sizeof(pathObject) , path,arg)) {
+				status = 2;
+				continue;
+			}
 		}
 
-		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName,sizeof(objectName)) != 0) {
+		if (popTrashName(objectTrashName,sizeof(objectTrashName),trash,objectName) != 0) {
 			fprintf(stderr,"Fail Trash Name\n\n");
 			status = 2;
 			continue;
 		}
 
-		if (concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName)) continue;
+		if (concatStringsNoMalloc(newPathObject,sizeof(newPathObject) , trash , objectTrashName)) {
+			status = 2;
+			continue;
+		}
 
 		//printf("object Name:%s\nnew location:%s\n" , pathObject,newPathObject);
 

@@ -1,8 +1,8 @@
 void usage();
 
-void clearDir(char *dir);
-
 void freeObject(char *s);
+
+int clearDir(const char *cd);
 
 int createDirctory(const char *s);
 
@@ -22,6 +22,6 @@ void cleanRet(int fdToClose , char *addrToFree , char *msgToRet);
 
 int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2);
 
-int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath);
+int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName);
 
-int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName , size_t objectNameSize);
+int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath);

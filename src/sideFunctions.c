@@ -2,7 +2,9 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <dirent.h>
+#include <ctype.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -31,7 +33,7 @@ int restoreObject(char *arg, char *trash, char* meta) {
 	lseek(fd,header-1,SEEK_SET);
 
 	char buffer[PATH_MAX];
-	ssize_t biread = read(fd,buffer ,sizeof(buffer));
+	ssize_t biread = read(fd,buffer ,sizeof(buffer)-1);
 	if ( biread  < 0 ) {
 		fprintf(stderr,"%s: %s\n","restore->read",strerror(errno));
 		close(fd);
@@ -59,6 +61,26 @@ int restoreObject(char *arg, char *trash, char* meta) {
 	return 0;
 }
 
+int rmObj(const char *obj) {
+	struct stat sb;
+	if (lstat(obj,&sb) < 0) {
+		fprintf(stderr,"lstat failed : %s\n",strerror(errno));
+		return 1;
+	}
+
+	if (S_ISDIR(sb.st_mode)) {
+		clearDir(obj);
+		if (rmdir(obj) < 0)
+			fprintf(stderr,"failed to remove dir %s: %s" , obj, strerror(errno));
+	} else {
+		if ( unlink(obj) < 0) {
+			fprintf(stderr,"%s: %s\n","restore->unlink",strerror(errno));
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const char *s2) {
 	if(destSize == 0) return 1;
 	size_t s1Size = strlen(s1);
@@ -75,10 +97,13 @@ int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const cha
 	return 0;
 }
 
-void clearDir(char *cd) {
+int clearDir(const char *cd) {
 	DIR *dir = opendir(cd);
+    if (!dir) {
+		fprintf(stderr , "failed to open dir %s : %s" , cd , strerror(errno));
+		return 1;
+	}
     struct dirent *ent;
-    if (!dir) { perror("opendir"); return; }
 
 	while ( (ent = readdir(dir)) != NULL) {
 		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
@@ -87,14 +112,17 @@ void clearDir(char *cd) {
 		if (ent->d_type == DT_DIR) {
 			// dir
 			clearDir(fullPath);
-			rmdir(fullPath);
+			if (rmdir(fullPath) < 0)
+				fprintf(stderr,"failed to remove dir %s: %s" , fullPath, strerror(errno));
 
 		} else  {
-			remove(fullPath);
+			if (unlink(fullPath) < 0)
+				fprintf(stderr,"failed to remove file %s: %s" , fullPath, strerror(errno));
 		}
-
 	}
+
 	closedir(dir);
+	return 0;
 }
 
 int viewDir(const char *cd) {
@@ -144,7 +172,7 @@ int baseNamePath(char *dest, size_t destSize, char *arg) {
     return 0;
 }
 
-int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName , size_t objectNameSize) {
+int popTrashName(char *dest ,size_t destSize, const char *trash , const char *objectName) {
 	char candidateName [NAME_MAX];
 	char fileToCheck   [PATH_MAX];
 
@@ -164,16 +192,44 @@ int popTrashName(char *dest ,size_t destSize, const char *trash , const char *ob
 int flagHand(char *arg, char *trash, char* meta, char *argNext) {
 	/* return 0 if main should take controle
 	 * return 1 if its a flag and is handled, -1 flag fails
-	 * 2 to disable flags, 3 to advance index, -3 to advance but with error*/
+	 * 2 to disable flags, 3 to terminate, -3 to terminate but with error*/
 	if ( arg[0] == '-' && arg[1] == '-' ) {
 		if (!(strlen(arg) == 2)) {
+			if (strcmp("--perm",arg) == 0) {
+				if(!argNext) {
+					fprintf(stderr,"specify object to remove\n");
+					return -3;
+				}
+				printf("Are You Sure? It Will be Removed Permanently [y/n] ");
+				fflush(stdout);
+				int in = tolower(getc(stdin));
+				switch (in) {
+					case 'y':
+						if (rmObj(argNext)) return -3;
+						return 3;
+					case 'n':
+						return 3;
+					default:
+						return -3;
+				}
+			}
 			if (strcmp("--clear",arg) == 0 ) {
 				char *dirs[] = {trash , meta};
-				for (int i = 0; i < 2; i++ ) {
-					char *cd = dirs[i];
-					clearDir(cd);
+				printf("Are You Sure? All Trash Content Will be Removed [y/n] ");
+				fflush(stdout);
+				char in = tolower(getc(stdin));
+				switch (in) {
+					case 'y':
+						for (int i = 0; i < 2; i++ ) {
+							char *cd = dirs[i];
+							if(clearDir(cd)) return -3;
+						}
+						return 3;
+					case 'n':
+						return 3;
+					default:
+						return -3;
 				}
-				return 1;
 			}
 			if (strcmp("--restore",arg) == 0 ) {
 				if (!argNext) {
@@ -196,11 +252,13 @@ int flagHand(char *arg, char *trash, char* meta, char *argNext) {
 	return 0;
 }
 void usage() {
-	char msg[] = 
-		"del [object] (to delete an object)\n" 
+	char msg[] =
+		"del [object] (to delete an object)\n"
 		"del [flag]\ndel -- (to disable flags)\n"
 		"Flags:\n\t--show\t\tto View Trash content\n"
-		"\t--clear\t\tto Clear Trash content\n\t--restore\tto restore the object (the object exact Trash name after the flag is needed)\n";
+		"\t--clear\t\tto Clear Trash content\n"
+		"\t--restore\tto restore an object (the object exact Trash name after the flag is needed)\n"
+		"\t--perm\t\tto permanently remove an object (the object exact name after the flag is needed)\n";
 
 	fprintf(stdout,"%s",msg);
 }
@@ -236,7 +294,7 @@ int objectMetadata(const char *meta , const char *objectTrashName ,const char *o
     time_t now = time(NULL);
     struct tm *tm = localtime(&now);
 
-    if (!tm || strftime(deletionTime, sizeof(deletionTime),"%Y-%m-%dT%H:%M:%S", tm) == 0) {
+    if (!tm || strftime(deletionTime, sizeof(deletionTime),"%Y-%m-%dT%H:%M:%S\n", tm) == 0) {
         close(fd);
         return 1;
     }
