@@ -142,18 +142,6 @@ int viewDir(const char *cd) {
 	return 0;
 }
 
-_Bool addSlashEnd(char *s , size_t len) {
-	size_t size = strlen(s);
-	if (size + 2 > len) {
-		fprintf(stderr,"string overflow,slash\n");
-		return 1;
-	}
-	s[size] = '/';
-	s[size + 1] = '\0';
-	return 0;
-}
-
-
 int baseNamePath(char *dest, size_t destSize, char *arg) {
     size_t len = strlen(arg);
 	if (len > destSize) return 1;

@@ -71,11 +71,13 @@ int main(int argc, char *argv[]) {
 		if (!disableFlag) {
 			int flagReturn = flagHand(arg,trash,meta,argv[i + 1]);
 			switch(flagReturn) {
-				case -1: status = 2; continue;
-				case -3: return 2;
-				case 1: continue;
+				case -1:
+				case -3:
+					return 2;
+				case 1:
+				case 3:
+					return 1;
 				case 2: disableFlag = 1; continue;
-				case 3: return 1;
 			}
 		}
 
@@ -83,7 +85,6 @@ int main(int argc, char *argv[]) {
 		char newPathObject   [PATH_MAX];
 		char objectName      [NAME_MAX];
 		char candidateName   [NAME_MAX];
-		char objectTrashName [NAME_MAX];
 
 		if (baseNamePath(objectName,sizeof(objectName) , arg)) {
 			fprintf(stderr,"base name for %s failed\n",arg);
@@ -108,22 +109,21 @@ int main(int argc, char *argv[]) {
 		}
 
 		strcpy(candidateName,objectName);
-		size_t i = 1;
+		size_t uv = 1;
 		while(1) {
 			if (concatStringsNoMalloc(newPathObject, sizeof(newPathObject), trash,candidateName)) return 1;
-			int rename = renameat2(0,pathObject,0,newPathObject,RENAME_NOREPLACE);
-			if (rename == 0) break;
+			if (renameat2(0,pathObject,0,newPathObject,RENAME_NOREPLACE) == 0) break;
 			if (errno == EEXIST) {
 				char id[32];
-				snprintf(id,sizeof(id),".%zu" , i++);
+				snprintf(id,sizeof(id),".%zu" , uv++);
 				if (concatStringsNoMalloc(candidateName, sizeof(candidateName),objectName , id )) return 1;
 				continue;
 			}
-				fprintf(stderr,"%s: %s\n","restore->rename",strerror(errno));
-				return 1;
+			fprintf(stderr,"failed to move''%s': %s\n",objectName,strerror(errno));
+			return 1;
 		}
 
-		if (objectMetadata(meta,objectTrashName,pathObject)) {
+		if (objectMetadata(meta,candidateName,pathObject)) {
 			status = 2;
 			continue;
 		}
