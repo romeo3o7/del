@@ -160,28 +160,32 @@ int baseNamePath(char *dest, size_t destSize, char *arg) {
     return 0;
 }
 
-int flagHand(char *arg, char *trash, char* meta, char *argNext) {
+int flagHand(char *trash, char* meta, int index , char **args) {
 	/* return 0 if main should take controle
-	 * return 1 if its a flag and is handled, -1 flag fails
-	 * 2 to disable flags, 3 to terminate, -3 to terminate but with error*/
+	 * return 1 if its a flag and is handled, -1 flag fails or not found
+	 * 2 to disable flags*/
+	char *arg = args[index++];
 	if ( arg[0] == '-' && arg[1] == '-' ) {
-		if (!(strlen(arg) == 2)) {
+		size_t argLen = strlen(arg);
+		if (argLen != 2) {
 			if (strcmp("--perm",arg) == 0) {
-				if(!argNext) {
-					fprintf(stderr,"specify object to remove\n");
-					return -3;
-				}
 				printf("Are You Sure? It Will be Removed Permanently [y/n] ");
 				fflush(stdout);
 				int in = tolower(getc(stdin));
 				switch (in) {
 					case 'y':
-						if (rmObj(argNext)) return -3;
-						return 3;
+						if(!args[index]) {
+							fprintf(stderr,"specify object to remove\n");
+							return -1;
+						}
+						while (args[index]) {
+							if (rmObj(args[index++])) return -1;
+						}
+						return 1;
 					case 'n':
-						return 3;
+						return 1;
 					default:
-						return -3;
+						return -1;
 				}
 			}
 			if (strcmp("--clear",arg) == 0 ) {
@@ -193,30 +197,35 @@ int flagHand(char *arg, char *trash, char* meta, char *argNext) {
 					case 'y':
 						for (int i = 0; i < 2; i++ ) {
 							char *cd = dirs[i];
-							if(clearDir(cd)) return -3;
+							if(clearDir(cd)) return -1;
 						}
-						return 3;
+						return 1;
 					case 'n':
-						return 3;
+						return 1;
 					default:
-						return -3;
+						return -1;
 				}
 			}
 			if (strcmp("--restore",arg) == 0 ) {
-				if (!argNext) {
+				if (!args[index]) {
 					fprintf(stderr,"specify object to restore\n");
-					return -3;
+					return -1;
 				}
-				if (restoreObject(argNext,trash,meta)) return -3;
-				return 3;
+				while(args[index]) {
+					if (restoreObject(args[index++],trash,meta)) return -1;
+				}
+				return 1;
 			}
 			if (strcmp("--show",arg) == 0 ) {
 				if (viewDir(trash)) return -1;
 				return 1;
 			}
-			fprintf(stderr,"flag not found\n");
-			usage();
-			return 1;
+			if (strcmp("--help",arg) == 0) {
+				usage();
+				return 1;
+			}
+			fprintf(stderr,"flag not found\n try 'del --help' for more information\n");
+			return -1;
 		}
 			return 2;
 	}
@@ -225,7 +234,7 @@ int flagHand(char *arg, char *trash, char* meta, char *argNext) {
 void usage() {
 	char msg[] =
 		"del [object] (to delete an object)\n"
-		"del [flag]\ndel -- (to disable flags)\n"
+		"del -- (to disable flags)\ndel [flag]\n"
 		"Flags:\n\t--show\t\tto View Trash content\n"
 		"\t--clear\t\tto Clear Trash content\n"
 		"\t--restore\tto restore an object (the object exact Trash name after the flag is needed)\n"

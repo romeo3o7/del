@@ -16,7 +16,7 @@ int restoreObject(char *arg, char *trash, char* meta);
 
 int baseNamePath(char *dest, size_t destSize, char *arg);
 
-int flagHand(char *arg, char *trash, char *meta, char *argNext);
+int flagHand(char *trash, char* meta, int index , char **args);
 
 void cleanRet(int fdToClose , char *addrToFree , char *msgToRet);
 

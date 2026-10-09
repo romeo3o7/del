@@ -10,8 +10,7 @@
 int main(int argc, char *argv[]) {
 
 	if (argc == 1) {
-		fprintf(stderr,"include an object to delete\n");
-		usage();
+		fprintf(stderr,"include an object to delete\ntry 'del --help' for more information\n");
 		return EXIT_FAILURE;
 	}
 
@@ -64,19 +63,16 @@ int main(int argc, char *argv[]) {
 
 	_Bool disableFlag = 0;
 	int status = 0;
-
-	for (int i = 1; argv[i]; i++) {
+	for (int i = 1; i < argc; i++) {
 		char *arg = argv[i];
 
 		if (!disableFlag) {
-			int flagReturn = flagHand(arg,trash,meta,argv[i + 1]);
+			int flagReturn = flagHand(trash,meta,i,argv);
 			switch(flagReturn) {
 				case -1:
-				case -3:
 					return 2;
 				case 1:
-				case 3:
-					return 1;
+					return 0;
 				case 2: disableFlag = 1; continue;
 			}
 		}
