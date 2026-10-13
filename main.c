@@ -69,11 +69,11 @@ int main(int argc, char *argv[]) {
 		if (!disableFlag) {
 			int flagReturn = flagHand(trash,meta,i,argv);
 			switch(flagReturn) {
-				case -1:
-					return 2;
-				case 1:
-					return 0;
-				case 2: disableFlag = 1; continue;
+				case  0: break;
+				case -1: return 2;
+				case  1: return 0;
+				case  2: disableFlag = 1; continue;
+				default: return 2;
 			}
 		}
 

@@ -10,7 +10,19 @@
 #include <stdio.h>
 #include "def.h"
 
-int restoreObject(char *arg, char *trash, char* meta) {
+static void usage(void) {
+	char msg[] =
+		"del [object] (to delete an object)\n"
+		"del -- (to disable flags)\ndel [flag]\n"
+		"Flags:\n\t--show\t\tto View Trash content\n"
+		"\t--clear\t\tto Clear Trash content\n"
+		"\t--restore\tto restore an object (the object exact Trash name after the flag is needed)\n"
+		"\t--perm\t\tto permanently remove an object (the object exact name after the flag is needed)\n";
+
+	printf("%s",msg);
+}
+
+static int restoreObject(char *arg, char *trash, char* meta) {
 	char Tpath[PATH_MAX];
 	if (concatStringsNoMalloc(Tpath,sizeof(Tpath),trash,arg))
 		return 1;
@@ -30,7 +42,7 @@ int restoreObject(char *arg, char *trash, char* meta) {
 	}
 
 	size_t header = sizeof("[Trash Info]\nPath=");
-	lseek(fd,header-1,SEEK_SET);
+	lseek(fd,(long)header-1,SEEK_SET);
 
 	char buffer[PATH_MAX];
 	ssize_t biread = read(fd,buffer ,sizeof(buffer)-1);
@@ -61,7 +73,35 @@ int restoreObject(char *arg, char *trash, char* meta) {
 	return 0;
 }
 
-int rmObj(const char *obj) {
+static int clearDir(const char *cd) {
+	DIR *dir = opendir(cd);
+    if (!dir) {
+		fprintf(stderr , "failed to open dir %s : %s" , cd , strerror(errno));
+		return 1;
+	}
+    struct dirent *ent;
+
+	while ( (ent = readdir(dir)) != NULL) {
+		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
+		char fullPath[PATH_MAX];
+		snprintf(fullPath,sizeof(fullPath),"%s/%s" , cd , ent->d_name);
+		if (ent->d_type == DT_DIR) {
+			// dir
+			clearDir(fullPath);
+			if (rmdir(fullPath) == -1)
+				fprintf(stderr,"failed to remove dir %s: %s" , fullPath, strerror(errno));
+
+		} else  {
+			if (unlink(fullPath) == -1)
+				fprintf(stderr,"failed to remove file %s: %s" , fullPath, strerror(errno));
+		}
+	}
+
+	closedir(dir);
+	return 0;
+}
+
+static int rmObj(const char *obj) {
 	struct stat sb;
 	if (lstat(obj,&sb) == -1) {
 		fprintf(stderr,"lstat failed : %s\n",strerror(errno));
@@ -97,35 +137,8 @@ int concatStringsNoMalloc(char *dest, size_t destSize, const char *s1, const cha
 	return 0;
 }
 
-int clearDir(const char *cd) {
-	DIR *dir = opendir(cd);
-    if (!dir) {
-		fprintf(stderr , "failed to open dir %s : %s" , cd , strerror(errno));
-		return 1;
-	}
-    struct dirent *ent;
 
-	while ( (ent = readdir(dir)) != NULL) {
-		if(strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 ) continue;
-		char fullPath[PATH_MAX];
-		snprintf(fullPath,sizeof(fullPath),"%s/%s" , cd , ent->d_name);
-		if (ent->d_type == DT_DIR) {
-			// dir
-			clearDir(fullPath);
-			if (rmdir(fullPath) == -1)
-				fprintf(stderr,"failed to remove dir %s: %s" , fullPath, strerror(errno));
-
-		} else  {
-			if (unlink(fullPath) == -1)
-				fprintf(stderr,"failed to remove file %s: %s" , fullPath, strerror(errno));
-		}
-	}
-
-	closedir(dir);
-	return 0;
-}
-
-int viewDir(const char *cd) {
+static int viewDir(const char *cd) {
     DIR *dir;
     struct dirent *ent;
 
@@ -192,7 +205,7 @@ int flagHand(char *trash, char* meta, int index , char **args) {
 				char *dirs[] = {trash , meta};
 				printf("Are You Sure? All Trash Content Will be Removed [y/n] ");
 				fflush(stdout);
-				char in = tolower(getc(stdin));
+				int in = tolower(getc(stdin));
 				switch (in) {
 					case 'y':
 						for (int i = 0; i < 2; i++ ) {
@@ -231,17 +244,6 @@ int flagHand(char *trash, char* meta, int index , char **args) {
 	}
 	return 0;
 }
-void usage() {
-	char msg[] =
-		"del [object] (to delete an object)\n"
-		"del -- (to disable flags)\ndel [flag]\n"
-		"Flags:\n\t--show\t\tto View Trash content\n"
-		"\t--clear\t\tto Clear Trash content\n"
-		"\t--restore\tto restore an object (the object exact Trash name after the flag is needed)\n"
-		"\t--perm\t\tto permanently remove an object (the object exact name after the flag is needed)\n";
-
-	fprintf(stdout,"%s",msg);
-}
 
 int objectMetadata(const char *meta , const char *objectTrashName ,const char *objectPath) {
 	char metadataPath[PATH_MAX];
@@ -249,8 +251,6 @@ int objectMetadata(const char *meta , const char *objectTrashName ,const char *o
 
 	char file[PATH_MAX];
 	if (concatStringsNoMalloc(file,sizeof(file) , metadataPath , ".trashinfo")) return 1;
-
-	//printf("metadataPath: %s\nfile: %s\n" , metadataPath,file);
 
 	int fd = open(file, O_WRONLY | O_CREAT,0600);
 	if (fd < 0) {
