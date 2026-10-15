@@ -157,7 +157,7 @@ static int viewDir(const char *cd) {
 
 int baseNamePath(char *dest, size_t destSize, char *arg) {
     size_t len = strlen(arg);
-	if (len > destSize) return 1;
+	if (len >= destSize) return 1;
     if (len == 0) return 1;
 
     size_t right = len - 1;
